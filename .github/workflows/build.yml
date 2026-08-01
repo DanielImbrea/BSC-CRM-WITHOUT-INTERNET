@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instaleaza dependentele
+        run: npm install
+
+      - name: Genereaza clientul Prisma
+        run: npx prisma generate
+
+      - name: Build renderer
+        run: npm run build:renderer
+
+      - name: Build si pachetare Electron
+        run: npx electron-builder --publish never
+
+      - name: Incarca instalatorul rezultat
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-manager-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
