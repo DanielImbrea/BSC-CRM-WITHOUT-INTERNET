@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+release/
+
+# Database (nu urcăm datele reale de laborator pe git)
+prisma/*.db
+prisma/*.db-journal
+prisma/migrations/dev/
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.suo
+Thumbs.db
+
+# Backup-uri generate de aplicație
+backups/

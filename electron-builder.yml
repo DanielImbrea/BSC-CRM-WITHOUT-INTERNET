@@ -1,0 +1,32 @@
+appId: com.labmanager.app
+productName: Lab Manager
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**
+  - dist-electron/**
+  - prisma/**
+
+extraResources:
+  - from: prisma
+    to: prisma
+
+# Prisma query engine e binar nativ — trebuie inclus explicit pentru fiecare platformă.
+asarUnpack:
+  - "**/node_modules/@prisma/engines/**"
+  - "**/node_modules/.prisma/client/**"
+  - "**/node_modules/argon2/**"
+
+mac:
+  target: dmg
+  category: public.app-category.business
+  hardenedRuntime: true
+
+win:
+  target: nsis
+
+linux:
+  target: AppImage
+  category: Office

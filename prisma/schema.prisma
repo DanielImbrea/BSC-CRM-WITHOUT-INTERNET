@@ -1,0 +1,183 @@
+// ============================================================================
+// Lab Manager — Database Schema
+// SQLite, offline, single-machine, single-user (Argon2id auth, no roles).
+// Sume bănești stocate ca Int (subunități monetare) — evită erori de rotunjire.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth — un singur rând (id fix "singleton"), o singură logare offline.
+// ---------------------------------------------------------------------------
+model AppAuth {
+  id           String   @id @default("singleton")
+  passwordHash String
+  updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Clienți
+// ---------------------------------------------------------------------------
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  works     Work[]
+
+  @@index([name])
+}
+
+// ---------------------------------------------------------------------------
+// Lucrări
+// ---------------------------------------------------------------------------
+enum WorkStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Work {
+  id         String         @id @default(cuid())
+  title      String
+  status     WorkStatus     @default(IN_PROGRESS)
+  client     Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientId   String
+  startedAt  DateTime       @default(now())
+  finishedAt DateTime?
+  materials  WorkMaterial[]
+  costs      CostEntry[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Materiale
+// ---------------------------------------------------------------------------
+model Material {
+  id            String         @id @default(cuid())
+  name          String
+  unit          String
+  unitCost      Int
+  stockQuantity Float          @default(0)
+  minStockQuantity Float       @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  usages        WorkMaterial[]
+
+  @@index([name])
+}
+
+// Tabel de legătură Work <-> Material, cu snapshot de preț la momentul consumului.
+model WorkMaterial {
+  id             String   @id @default(cuid())
+  work           Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+  workId         String
+  material       Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  materialId     String
+  quantity       Float
+  unitCostAtTime Int
+  createdAt      DateTime @default(now())
+
+  @@index([workId])
+  @@index([materialId])
+}
+
+// ---------------------------------------------------------------------------
+// Costuri (generale sau per-lucrare)
+// ---------------------------------------------------------------------------
+model CostEntry {
+  id          String   @id @default(cuid())
+  description String
+  amount      Int
+  category    String
+  work        Work?    @relation(fields: [workId], references: [id], onDelete: SetNull)
+  workId      String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workId])
+  @@index([date])
+}
+
+// ---------------------------------------------------------------------------
+// Angajați și Salarii
+// ---------------------------------------------------------------------------
+model Employee {
+  id        String        @id @default(cuid())
+  name      String
+  position  String?
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  salaries  SalaryEntry[]
+
+  @@index([active])
+}
+
+model SalaryEntry {
+  id         String    @id @default(cuid())
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId String
+  period     String // format "YYYY-MM"
+  baseAmount Int
+  bonuses    Int       @default(0)
+  deductions Int       @default(0)
+  netAmount  Int
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([employeeId, period])
+  @@index([period])
+}
+
+// ---------------------------------------------------------------------------
+// Setări aplicație (cheie-valoare)
+// ---------------------------------------------------------------------------
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Audit Log — doar acțiuni critice (ștergeri, salarii, autentificare, backup)
+// ---------------------------------------------------------------------------
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String // ex: "DELETE" | "SALARY_UPDATE" | "AUTH_CHANGE" | "BACKUP_RESTORE"
+  entityType String // ex: "Work" | "SalaryEntry" | "Client"
+  entityId   String?
+  before     String? // JSON snapshot
+  after      String? // JSON snapshot
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Backup
+// ---------------------------------------------------------------------------
+model BackupRecord {
+  id        String   @id @default(cuid())
+  filePath  String
+  sizeBytes Int
+  type      String // "MANUAL" | "AUTO"
+  createdAt DateTime @default(now())
+}
