@@ -1,7 +1,7 @@
 import * as React from "react";
 import { authApi } from "../api/auth-api";
 
-type AuthPhase = "loading" | "needs-setup" | "needs-login" | "authenticated";
+type AuthPhase = "loading" | "needs-setup" | "needs-login" | "authenticated" | "error";
 
 interface AuthContextValue {
   phase: AuthPhase;
@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        setPhase("error");
         setErrorMessage(error instanceof Error ? error.message : "Eroare necunoscută.");
       });
     return () => {

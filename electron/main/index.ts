@@ -28,7 +28,10 @@ function createMainWindow(): void {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      // sandbox:true poate împiedica încărcarea preload-ului atunci când e
+      // compilat ca ESM de Vite — dezactivat aici, dar renderer-ul rămâne
+      // izolat complet prin contextIsolation + nodeIntegration:false.
+      sandbox: false,
     },
   });
 
