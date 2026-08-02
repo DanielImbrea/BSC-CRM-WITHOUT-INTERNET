@@ -25,12 +25,10 @@ function createMainWindow(): void {
     autoHideMenuBar: true,
     backgroundColor: "#0a0a0a",
     webPreferences: {
-      preload: path.join(__dirname, "../preload/index.js"),
+      preload: path.join(__dirname, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
-      // sandbox:true poate împiedica încărcarea preload-ului atunci când e
-      // compilat ca ESM de Vite — dezactivat aici, dar renderer-ul rămâne
-      // izolat complet prin contextIsolation + nodeIntegration:false.
+      // Preload compilat ca CJS (.cjs) — vezi vite.config.ts, secțiunea preload.
       sandbox: false,
     },
   });

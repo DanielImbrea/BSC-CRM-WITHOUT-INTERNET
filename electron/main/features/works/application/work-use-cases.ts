@@ -1,13 +1,25 @@
 import { Prisma } from "@prisma/client";
 import { getPrismaClient } from "../../../shared/db";
 import { worksRepository, type WorkDetailRecord, type WorkListRecord } from "../infrastructure/works-repository";
-import { materialsRepository } from "../../materials/infrastructure/materials-repository";
+import { materialsRepository, type MaterialRecord } from "../../materials/infrastructure/materials-repository";
 import { assertWorkIsValid, type WorkInput } from "../domain/work-validation";
-import { NotFoundError, ConflictError } from "../../../shared/errors";
+import { NotFoundError } from "../../../shared/errors";
 import { recordAuditEvent } from "../../audit-log/application/record-audit-event";
 import { AUDIT_ACTIONS } from "../../audit-log/domain/audit-action";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
 import type { WorkStatus } from "@shared-types/ipc";
+import type { DbClient } from "../../../shared/db";
+
+async function resolveMaterialByName(name: string, tx: DbClient): Promise<MaterialRecord> {
+  const trimmed = name.trim();
+  const existing = await materialsRepository.findByName(trimmed, tx);
+  if (existing) return existing;
+
+  return materialsRepository.create(
+    { name: trimmed, unit: "buc", unitCost: 0, stockQuantity: 0, minStockQuantity: 0 },
+    tx,
+  );
+}
 
 export async function listWorks(): Promise<WorkListRecord[]> {
   requireAuthenticated();
@@ -25,9 +37,9 @@ export async function getWork(id: string): Promise<WorkDetailRecord> {
 
 /**
  * Creează o Lucrare împreună cu materialele consumate și costurile asociate,
- * totul într-o singură tranzacție: dacă orice pas eșuează (stoc insuficient,
- * material inexistent, client invalid), NU rămâne nimic scris în baza de date.
- * Stocul materialelor consumate e decrementat atomic, în aceeași tranzacție.
+ * totul într-o singură tranzacție: dacă orice pas eșuează (client invalid etc.),
+ * NU rămâne nimic scris în baza de date.
+ * Materialele noi (nume libere) sunt create automat în stoc.
  */
 export async function createWork(input: WorkInput): Promise<WorkDetailRecord> {
   requireAuthenticated();
@@ -39,17 +51,9 @@ export async function createWork(input: WorkInput): Promise<WorkDetailRecord> {
     const materialSnapshots: { materialId: string; quantity: number; unitCost: number }[] = [];
 
     for (const line of input.materials) {
-      const material = await materialsRepository.findById(line.materialId, tx);
-      if (!material) {
-        throw new NotFoundError("Material", line.materialId);
-      }
-      if (material.stockQuantity < line.quantity) {
-        throw new ConflictError(
-          `Stoc insuficient pentru "${material.name}": disponibil ${material.stockQuantity} ${material.unit}, necesar ${line.quantity} ${material.unit}.`,
-        );
-      }
+      const material = await resolveMaterialByName(line.materialName, tx);
       materialSnapshots.push({
-        materialId: line.materialId,
+        materialId: material.id,
         quantity: line.quantity,
         unitCost: material.unitCost,
       });

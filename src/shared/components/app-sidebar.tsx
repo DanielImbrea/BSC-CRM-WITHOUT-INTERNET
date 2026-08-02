@@ -46,7 +46,7 @@ export function AppSidebar() {
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-card">
       <div className="flex h-14 items-center px-5">
-        <span className="text-sm font-semibold tracking-tight text-foreground">Lab Manager</span>
+        <span className="text-sm font-semibold tracking-tight text-foreground">Billionaire Smile Club CRM</span>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2">

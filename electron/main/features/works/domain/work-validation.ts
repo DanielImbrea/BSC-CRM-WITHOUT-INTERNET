@@ -1,7 +1,7 @@
 import { ValidationError } from "../../../shared/errors";
 
 export interface WorkMaterialLine {
-  materialId: string;
+  materialName: string;
   quantity: number;
 }
 
@@ -27,13 +27,16 @@ export function assertWorkIsValid(input: WorkInput): void {
   }
 
   for (const line of input.materials) {
+    if (line.materialName.trim().length < 2) {
+      throw new ValidationError("Numele materialului trebuie să aibă cel puțin 2 caractere.");
+    }
     if (line.quantity <= 0) {
       throw new ValidationError("Cantitatea de material trebuie să fie mai mare ca 0.");
     }
   }
 
-  const materialIds = input.materials.map((m) => m.materialId);
-  if (new Set(materialIds).size !== materialIds.length) {
+  const materialNames = input.materials.map((m) => m.materialName.trim().toLowerCase());
+  if (new Set(materialNames).size !== materialNames.length) {
     throw new ValidationError("Același material apare de mai multe ori — combină-le într-o singură linie.");
   }
 

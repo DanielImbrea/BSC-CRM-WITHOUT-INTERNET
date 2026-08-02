@@ -26,7 +26,7 @@ export function LoginScreen() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">Lab Manager</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground">Billionaire Smile Club CRM</CardTitle>
           <p className="text-sm text-muted-foreground">Introdu parola pentru a continua.</p>
         </CardHeader>
         <CardContent>

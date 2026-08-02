@@ -48,7 +48,7 @@ export function CreateWorkDialog({ open, onOpenChange }: CreateWorkDialogProps) 
       title: values.title,
       clientId: values.clientId,
       materials: values.materials.map((m) => ({
-        materialId: m.materialId,
+        materialName: m.materialName.trim(),
         quantity: Number(m.quantity),
       })),
       // Sumele se introduc de utilizator în RON și se convertesc în bani (subunități) pentru backend.
@@ -118,7 +118,7 @@ export function CreateWorkDialog({ open, onOpenChange }: CreateWorkDialogProps) 
                 variant="outline"
                 size="sm"
                 className="gap-1"
-                onClick={() => materialFields.append({ materialId: "", quantity: "" })}
+                onClick={() => materialFields.append({ materialName: "", quantity: "" })}
               >
                 <Plus className="h-3.5 w-3.5" />
                 Adaugă material
@@ -132,26 +132,19 @@ export function CreateWorkDialog({ open, onOpenChange }: CreateWorkDialogProps) 
             {materialFields.fields.map((field, index) => (
               <div key={field.id} className="flex items-start gap-2">
                 <div className="flex-1">
-                  <Select
-                    value={form.watch(`materials.${index}.materialId`)}
-                    onValueChange={(value) =>
-                      form.setValue(`materials.${index}.materialId`, value, { shouldValidate: true })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Material" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {materials?.map((material) => (
-                        <SelectItem key={material.id} value={material.id}>
-                          {material.name} (stoc: {material.stockQuantity} {material.unit})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.materials?.[index]?.materialId && (
+                  <Input
+                    placeholder="Material"
+                    list={`work-materials-${index}`}
+                    {...form.register(`materials.${index}.materialName`)}
+                  />
+                  <datalist id={`work-materials-${index}`}>
+                    {materials?.map((material) => (
+                      <option key={material.id} value={material.name} />
+                    ))}
+                  </datalist>
+                  {form.formState.errors.materials?.[index]?.materialName && (
                     <p className="mt-1 text-xs text-destructive">
-                      {form.formState.errors.materials[index]?.materialId?.message}
+                      {form.formState.errors.materials[index]?.materialName?.message}
                     </p>
                   )}
                 </div>

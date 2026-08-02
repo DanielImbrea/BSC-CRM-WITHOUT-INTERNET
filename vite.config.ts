@@ -31,6 +31,17 @@ export default defineConfig({
           resolve: { alias: aliasConfig },
           build: {
             outDir: "dist-electron/preload",
+            rollupOptions: {
+              external: ["electron"],
+              output: {
+                // Proiectul e ESM ("type":"module") — preload CJS trebuie .cjs,
+                // altfel Node tratează .js ca ESM și require() eșuează.
+                format: "cjs",
+                entryFileNames: "index.cjs",
+                chunkFileNames: "[name].cjs",
+                inlineDynamicImports: true,
+              },
+            },
           },
         },
       },

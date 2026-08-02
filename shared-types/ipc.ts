@@ -119,7 +119,7 @@ export interface WorkDto {
 }
 
 export interface CreateWorkMaterialInput {
-  materialId: string;
+  materialName: string;
   quantity: number;
 }
 

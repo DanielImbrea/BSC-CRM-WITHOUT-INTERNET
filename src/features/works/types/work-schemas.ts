@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const workMaterialLineSchema = z.object({
-  materialId: z.string().min(1, "Selectează un material."),
+  materialName: z.string().trim().min(2, "Numele materialului trebuie să aibă cel puțin 2 caractere."),
   // Cantitatea se introduce ca text în formular (input controlat de utilizator)
   // și se convertește în număr la submit — vezi transformarea din workFormSchema.
   quantity: z
