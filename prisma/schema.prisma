@@ -41,16 +41,13 @@ model Client {
 // ---------------------------------------------------------------------------
 // Lucrări
 // ---------------------------------------------------------------------------
-enum WorkStatus {
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
+// Notă: SQLite nu suportă `enum` nativ în Prisma (doar Postgres/MySQL).
+// Statusul e stocat ca String, iar valorile valide sunt impuse din cod
+// (tipul WorkStatus din shared-types/ipc.ts + validare în work-validation.ts).
 model Work {
   id         String         @id @default(cuid())
   title      String
-  status     WorkStatus     @default(IN_PROGRESS)
+  status     String         @default("IN_PROGRESS")
   client     Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
   clientId   String
   startedAt  DateTime       @default(now())

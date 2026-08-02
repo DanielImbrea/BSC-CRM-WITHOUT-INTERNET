@@ -63,7 +63,7 @@ export const worksRepository = {
     return rows.map((row) => ({
       id: row.id,
       title: row.title,
-      status: row.status,
+      status: row.status as WorkStatus,
       clientName: row.client.name,
       startedAt: row.startedAt,
       totalCost: computeTotalCost(row.costs, row.materials),
@@ -84,7 +84,7 @@ export const worksRepository = {
     return {
       id: row.id,
       title: row.title,
-      status: row.status,
+      status: row.status as WorkStatus,
       clientId: row.clientId,
       clientName: row.client.name,
       startedAt: row.startedAt,

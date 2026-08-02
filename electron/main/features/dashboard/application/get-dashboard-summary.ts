@@ -1,5 +1,5 @@
 import { getPrismaClient } from "../../../shared/db";
-import type { DashboardSummary } from "@shared-types/ipc";
+import type { DashboardSummary, WorkStatus } from "@shared-types/ipc";
 
 function monthRange(date = new Date()): { start: Date; end: Date } {
   const start = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -43,7 +43,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       id: work.id,
       title: work.title,
       clientName: work.client.name,
-      status: work.status,
+      status: work.status as WorkStatus,
       startedAt: work.startedAt.toISOString(),
     })),
   };
