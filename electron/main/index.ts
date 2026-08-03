@@ -1,9 +1,11 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, shell, dialog } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerAllIpcHandlers } from "./register-ipc-handlers";
-import { getPrismaClient, disconnectPrisma, prepareDatabaseEnvironment } from "./shared/db";
+import { getPrismaClient, disconnectPrisma, prepareDatabaseEnvironment, getDatabaseFilePath } from "./shared/db";
+import { configurePrismaEnginePaths } from "./shared/prisma-engines";
 import { runDatabaseMigrations } from "./shared/run-migrations";
+import { applySqlMigrationsFallback } from "./shared/apply-sql-migrations";
 import { logger } from "./shared/logger";
 import { getAutoBackupSettingsUnsafe } from "./features/settings/application/settings-use-cases";
 import { createBackup, pruneOldBackups } from "./features/backup/application/backup-use-cases";
@@ -59,15 +61,32 @@ function createMainWindow(): void {
 
 async function initializeDatabase(): Promise<void> {
   const databaseUrl = prepareDatabaseEnvironment();
+  configurePrismaEnginePaths();
+
+  const db = getPrismaClient();
+
   if (app.isPackaged) {
-    runDatabaseMigrations(databaseUrl);
+    try {
+      runDatabaseMigrations(databaseUrl);
+    } catch (error) {
+      logger.warn("Migrare Prisma CLI eșuată — aplic fallback SQL:", error);
+      await applySqlMigrationsFallback(db);
+    }
   }
 
-  // Forțează conectarea la pornire, ca eventualele erori (fișier corupt,
-  // permisiuni lipsă) să apară imediat, nu la prima acțiune a utilizatorului.
-  const db = getPrismaClient();
   await db.$connect();
-  logger.info("Baza de date conectată.");
+  logger.info("Baza de date conectată.", getDatabaseFilePath());
+}
+
+function showFatalStartupError(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const logsDir = app.isReady() ? path.join(app.getPath("userData"), "logs") : "";
+  const details = logsDir ? `\n\nLoguri: ${logsDir}` : "";
+
+  dialog.showErrorBox(
+    "Billionaire Smile Club CRM — eroare la pornire",
+    `${message}${details}`,
+  );
 }
 
 app.whenReady().then(async () => {
@@ -77,6 +96,7 @@ app.whenReady().then(async () => {
     createMainWindow();
   } catch (error) {
     logger.error("Eroare fatală la pornirea aplicației:", error);
+    showFatalStartupError(error);
     app.quit();
   }
 

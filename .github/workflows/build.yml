@@ -37,10 +37,18 @@ jobs:
           test -f dist-electron/main/index.js
           test -f dist-electron/preload/index.cjs
           test -d node_modules/prisma-client
+          test -d node_modules/@prisma/engines
 
       - name: Build si pachetare Electron (Windows)
         if: runner.os == 'Windows'
         run: npx electron-builder --win --x64 --publish never
+
+      - name: Verifica Prisma in pachet (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          npx asar list release/win-unpacked/resources/app.asar | grep -E "prisma-client|@prisma/engines" | head -5
+          ls release/win-unpacked/resources/app.asar.unpacked/node_modules/prisma-client/ | grep -E "node|dll"
 
       - name: Build si pachetare Electron (macOS)
         if: runner.os == 'macOS'

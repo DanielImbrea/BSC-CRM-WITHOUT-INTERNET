@@ -13,16 +13,21 @@ files:
     to: node_modules/prisma-client
     filter:
       - "**/*"
+  - from: node_modules/@prisma/engines
+    to: node_modules/@prisma/engines
+    filter:
+      - "**/*"
 
 extraResources:
   - from: prisma
     to: prisma
 
-# Prisma query engine e binar nativ — trebuie inclus explicit pentru fiecare platformă.
+# Binarele native (Prisma query/schema engine) nu pot rula din interiorul app.asar.
 asarUnpack:
+  - "**/*.node"
+  - "**/*.dll"
   - "**/node_modules/@prisma/engines/**"
   - "**/node_modules/prisma-client/**"
-  - "**/node_modules/prisma/**"
 
 mac:
   target: zip
@@ -32,6 +37,19 @@ mac:
 win:
   target: nsis
   executableName: BSC-CRM
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Billionaire Smile Club CRM
+  artifactName: BSC-CRM-Setup-${version}.${ext}
+  # Păstrează baza de date din AppData la dezinstalare.
+  deleteAppDataOnUninstall: false
+  uninstallDisplayName: Billionaire Smile Club CRM
 
 linux:
   target: AppImage

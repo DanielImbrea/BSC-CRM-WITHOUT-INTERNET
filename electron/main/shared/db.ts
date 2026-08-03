@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient as PrismaClientInstance } from "prisma-client";
 import { PrismaClient } from "./prisma";
+import { configurePrismaEnginePaths } from "./prisma-engines";
 import { app } from "electron";
 import path from "node:path";
 import fs from "node:fs";
@@ -69,6 +70,7 @@ let prismaInstance: PrismaClientInstance | null = null;
 
 export function getPrismaClient(): PrismaClientInstance {
   if (!prismaInstance) {
+    configurePrismaEnginePaths();
     process.env.DATABASE_URL = resolveDatabaseUrl();
     prismaInstance = new PrismaClient({
       log: app.isPackaged ? ["error", "warn"] : ["error", "warn", "query"],

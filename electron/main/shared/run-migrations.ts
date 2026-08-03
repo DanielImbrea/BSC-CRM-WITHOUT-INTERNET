@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { app } from "electron";
+import { configurePrismaEnginePaths } from "./prisma-engines";
 import { logger } from "./logger";
 
 function resolveSchemaPath(): string {
@@ -33,6 +34,7 @@ function resolvePrismaCliPath(): string {
  * Fără acest pas, baza SQLite din userData e goală și auth/CRUD eșuează.
  */
 export function runDatabaseMigrations(databaseUrl: string): void {
+  configurePrismaEnginePaths();
   const schemaPath = resolveSchemaPath();
   const prismaCli = resolvePrismaCliPath();
 

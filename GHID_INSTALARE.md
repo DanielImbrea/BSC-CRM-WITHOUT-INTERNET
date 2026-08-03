@@ -99,6 +99,20 @@ La fiecare tag `v*` împins pe git (`git tag v1.0.0 && git push --tags`), GitHub
 2. Rulează instalatorul — Windows poate afișa un avertisment „Windows protected your PC" pentru că aplicația nu e semnată digital cu un certificat plătit; alege „More info" → „Run anyway".
 3. La prima pornire, aplicația îți cere să configurezi o parolă nouă — baza de date pornește goală pe noul calculator.
 
+### Probleme frecvente pe Windows (nesemnat digital)
+
+| Simptom | Cauză | Soluție |
+|--------|--------|---------|
+| **Windows protected your PC** / SmartScreen | `.exe` nesemnat | „More info" → „Run anyway" |
+| **Avast / CyberCapture blochează** | fișier nou, necunoscut | Avast → Exceptions → adaugă `.exe`-ul |
+| **Parolă incorectă** după upgrade | hash vechi sau DB corupt | Login → „Resetează parola" sau șterge `%APPDATA%\lab-manager\database\lab-manager.db` |
+| **Eroare la pornire (Prisma)** | versiune veche | Instalează ultimul `.exe` din GitHub Actions |
+| **Date dispărute după update** | normal — update-ul nu șterge AppData | Baza e în `%APPDATA%\lab-manager\database\` — folosește Backup regulat |
+
+**Loguri pentru diagnostic:** `%APPDATA%\lab-manager\logs\`
+
+**Semnare digitală (viitor):** certificat code signing (~200–400 €/an) elimină majoritatea avertismentelor Antivirus/SmartScreen.
+
 ## 5. Migrarea datelor pe noul calculator (dacă vrei să continui cu aceleași date)
 
 Aplicația nu sincronizează automat între calculatoare (funcționează strict local, conform cerinței inițiale). Pentru a muta datele:
