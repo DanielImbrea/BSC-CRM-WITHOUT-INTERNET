@@ -103,3 +103,19 @@ export async function disconnectPrisma(): Promise<void> {
     prismaInstance = null;
   }
 }
+
+/** Șterge baza coruptă/parțial inițializată și recreează fișierul gol. */
+export async function resetDatabaseFile(): Promise<void> {
+  await disconnectPrisma();
+
+  const filePath = resolveDatabaseFilePath();
+  for (const suffix of ["", "-wal", "-shm"]) {
+    const candidate = `${filePath}${suffix}`;
+    if (fs.existsSync(candidate)) {
+      fs.unlinkSync(candidate);
+    }
+  }
+
+  ensureDatabaseFileReady();
+  process.env.DATABASE_URL = resolveDatabaseUrl();
+}
