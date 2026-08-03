@@ -18,19 +18,32 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
       - name: Instaleaza dependentele
-        run: npm install
+        run: npm ci
 
       - name: Genereaza clientul Prisma
         run: npx prisma generate
 
-      - name: Build renderer
+      - name: Build renderer si Electron
         run: npm run build:renderer
 
-      - name: Build si pachetare Electron
-        run: npx electron-builder --publish never
+      - name: Verifica artefactele de build
+        shell: bash
+        run: |
+          test -f dist/index.html
+          test -f dist-electron/main/index.js
+          test -f dist-electron/preload/index.cjs
+
+      - name: Build si pachetare Electron (Windows)
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Build si pachetare Electron (macOS)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --publish never
 
       - name: Incarca instalatorul rezultat
         uses: actions/upload-artifact@v4

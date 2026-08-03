@@ -20,7 +20,7 @@ export default defineConfig({
             outDir: "dist-electron/main",
             rollupOptions: {
               // Prisma & Argon2 folosesc binare native — nu trebuie bundle-uite de Rollup.
-              external: ["@prisma/client", "argon2", "electron"],
+              external: ["@prisma/client", "electron"],
             },
           },
         },

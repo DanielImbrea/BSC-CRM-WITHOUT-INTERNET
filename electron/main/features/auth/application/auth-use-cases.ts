@@ -1,10 +1,12 @@
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { authRepository } from "../infrastructure/auth-repository";
 import { assertPasswordIsValid } from "../domain/password-policy";
 import { session } from "./session";
 import { recordAuditEvent } from "../../audit-log/application/record-audit-event";
 import { AUDIT_ACTIONS } from "../../audit-log/domain/audit-action";
 import { UnauthorizedError, ValidationError, ConflictError } from "../../../shared/errors";
+
+const BCRYPT_ROUNDS = 12;
 
 export async function getAuthStatus(): Promise<{ configured: boolean }> {
   const record = await authRepository.find();
@@ -39,7 +41,7 @@ export async function setupInitialPassword(password: string): Promise<void> {
   }
 
   assertPasswordIsValid(password);
-  const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+  const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
   await authRepository.upsertPasswordHash(passwordHash);
   session.markAuthenticated();
 
@@ -55,7 +57,7 @@ export async function login(password: string): Promise<void> {
     throw new ValidationError("Aplicația nu a fost încă configurată cu o parolă.");
   }
 
-  const isValid = await argon2.verify(record.passwordHash, password);
+  const isValid = bcrypt.compareSync(password, record.passwordHash);
   if (!isValid) {
     await recordAuditEvent({
       action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
@@ -81,13 +83,13 @@ export async function changePassword(currentPassword: string, newPassword: strin
     throw new ValidationError("Aplicația nu a fost încă configurată cu o parolă.");
   }
 
-  const isValid = await argon2.verify(record.passwordHash, currentPassword);
+  const isValid = bcrypt.compareSync(currentPassword, record.passwordHash);
   if (!isValid) {
     throw new UnauthorizedError("Parola curentă este incorectă.");
   }
 
   assertPasswordIsValid(newPassword);
-  const passwordHash = await argon2.hash(newPassword, { type: argon2.argon2id });
+  const passwordHash = bcrypt.hashSync(newPassword, BCRYPT_ROUNDS);
   await authRepository.upsertPasswordHash(passwordHash);
 
   await recordAuditEvent({

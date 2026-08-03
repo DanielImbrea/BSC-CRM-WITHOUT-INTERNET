@@ -1,6 +1,6 @@
 {
   "name": "lab-manager",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Aplicație desktop offline pentru managementul unui laborator",
   "author": "",
@@ -30,7 +30,7 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.1",
     "@tanstack/react-query": "^5.56.2",
-    "argon2": "^0.41.1",
+    "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",

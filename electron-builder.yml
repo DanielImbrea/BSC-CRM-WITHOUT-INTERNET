@@ -17,15 +17,15 @@ extraResources:
 asarUnpack:
   - "**/node_modules/@prisma/engines/**"
   - "**/node_modules/.prisma/client/**"
-  - "**/node_modules/argon2/**"
 
 mac:
   target: zip
   category: public.app-category.business
-  hardenedRuntime: true
+  hardenedRuntime: false
 
 win:
   target: nsis
+  executableName: BSC-CRM
 
 linux:
   target: AppImage
