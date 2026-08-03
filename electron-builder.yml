@@ -20,7 +20,7 @@ asarUnpack:
   - "**/node_modules/argon2/**"
 
 mac:
-  target: dmg
+  target: zip
   category: public.app-category.business
   hardenedRuntime: true
 
