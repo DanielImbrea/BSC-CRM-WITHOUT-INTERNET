@@ -8,7 +8,7 @@ import { useAuth } from "../hooks/use-auth";
 import { loginSchema, type LoginFormValues } from "../types/auth-schemas";
 
 export function LoginScreen() {
-  const { login, errorMessage } = useAuth();
+  const { login, resetPassword, errorMessage } = useAuth();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { password: "" },
@@ -41,6 +41,23 @@ export function LoginScreen() {
             {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
             <Button type="submit" disabled={form.formState.isSubmitting} className="mt-2">
               {form.formState.isSubmitting ? "Se verifică..." : "Autentificare"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-xs text-muted-foreground"
+              disabled={form.formState.isSubmitting}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Resetezi parola aplicației? Vei putea seta una nouă imediat. Datele (doctori, lucrări) rămân.",
+                  )
+                ) {
+                  void resetPassword();
+                }
+              }}
+            >
+              Resetează parola
             </Button>
           </form>
         </CardContent>

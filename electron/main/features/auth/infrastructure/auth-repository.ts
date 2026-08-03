@@ -27,4 +27,9 @@ export const authRepository = {
       update: { passwordHash },
     });
   },
+
+  async clearPassword(): Promise<void> {
+    const db = getPrismaClient();
+    await db.appAuth.deleteMany({ where: { id: SINGLETON_ID } });
+  },
 };

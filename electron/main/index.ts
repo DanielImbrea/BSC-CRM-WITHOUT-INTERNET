@@ -2,7 +2,8 @@ import { app, BrowserWindow, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerAllIpcHandlers } from "./register-ipc-handlers";
-import { getPrismaClient, disconnectPrisma } from "./shared/db";
+import { getPrismaClient, disconnectPrisma, prepareDatabaseEnvironment } from "./shared/db";
+import { runDatabaseMigrations } from "./shared/run-migrations";
 import { logger } from "./shared/logger";
 import { getAutoBackupSettingsUnsafe } from "./features/settings/application/settings-use-cases";
 import { createBackup, pruneOldBackups } from "./features/backup/application/backup-use-cases";
@@ -57,6 +58,11 @@ function createMainWindow(): void {
 }
 
 async function initializeDatabase(): Promise<void> {
+  const databaseUrl = prepareDatabaseEnvironment();
+  if (app.isPackaged) {
+    runDatabaseMigrations(databaseUrl);
+  }
+
   // Forțează conectarea la pornire, ca eventualele erori (fișier corupt,
   // permisiuni lipsă) să apară imediat, nu la prima acțiune a utilizatorului.
   const db = getPrismaClient();

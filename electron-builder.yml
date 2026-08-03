@@ -17,6 +17,7 @@ extraResources:
 asarUnpack:
   - "**/node_modules/@prisma/engines/**"
   - "**/node_modules/.prisma/client/**"
+  - "**/node_modules/prisma/**"
 
 mac:
   target: zip

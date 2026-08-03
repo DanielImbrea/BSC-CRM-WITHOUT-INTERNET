@@ -40,4 +40,8 @@ export function registerAuthHandlers(): void {
     const info = await authUseCases.getSecurityInfo();
     return { passwordUpdatedAt: info.passwordUpdatedAt.toISOString() };
   });
+
+  registerIpcHandler<void, void>(IPC_CHANNELS.AUTH_RESET_PASSWORD, async () => {
+    await authUseCases.resetPasswordForRecovery();
+  });
 }

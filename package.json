@@ -1,6 +1,6 @@
 {
   "name": "lab-manager",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "description": "Aplicație desktop offline pentru managementul unui laborator",
   "author": "",
@@ -42,7 +42,8 @@
     "react-router-dom": "^6.26.2",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "prisma": "^5.20.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.9",
@@ -55,7 +56,6 @@
     "electron-builder": "^25.0.5",
     "eslint": "^9.11.1",
     "postcss": "^8.4.47",
-    "prisma": "^5.20.0",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2",
     "vite": "^5.4.7",

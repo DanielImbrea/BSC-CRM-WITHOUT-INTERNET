@@ -53,6 +53,12 @@ function resolveDatabaseUrl(): string {
   return `file:${resolveDatabaseFilePath()}`;
 }
 
+export function prepareDatabaseEnvironment(): string {
+  const url = resolveDatabaseUrl();
+  process.env.DATABASE_URL = url;
+  return url;
+}
+
 /** Calea absolută pe disc a fișierului .db — folosită de modulul Backup pentru copiere directă. */
 export function getDatabaseFilePath(): string {
   return resolveDatabaseFilePath();

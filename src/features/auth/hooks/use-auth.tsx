@@ -9,6 +9,7 @@ interface AuthContextValue {
   setupPassword: (password: string) => Promise<void>;
   login: (password: string) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: () => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -62,9 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPhase("needs-login");
   }, []);
 
+  const resetPassword = React.useCallback(async () => {
+    setErrorMessage(null);
+    try {
+      await authApi.resetPassword();
+      setPhase("needs-setup");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Eroare necunoscută.");
+      throw error;
+    }
+  }, []);
+
   const value = React.useMemo(
-    () => ({ phase, errorMessage, setupPassword, login, logout }),
-    [phase, errorMessage, setupPassword, login, logout],
+    () => ({ phase, errorMessage, setupPassword, login, logout, resetPassword }),
+    [phase, errorMessage, setupPassword, login, logout, resetPassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

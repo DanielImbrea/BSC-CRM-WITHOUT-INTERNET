@@ -326,6 +326,7 @@ export const IPC_CHANNELS = {
   AUTH_LOGOUT: "auth:logout",
   AUTH_CHANGE_PASSWORD: "auth:change-password",
   AUTH_GET_SECURITY_INFO: "auth:get-security-info",
+  AUTH_RESET_PASSWORD: "auth:reset-password",
   DASHBOARD_GET_SUMMARY: "dashboard:get-summary",
   DOCTORS_LIST: "doctors:list",
   DOCTORS_GET: "doctors:get",
@@ -367,6 +368,7 @@ export interface LabManagerApi {
     logout: () => Promise<IpcResult<void>>;
     changePassword: (payload: AuthChangePasswordRequest) => Promise<IpcResult<void>>;
     getSecurityInfo: () => Promise<IpcResult<AuthSecurityInfoResponse>>;
+    resetPassword: () => Promise<IpcResult<void>>;
   };
   dashboard: {
     getSummary: () => Promise<IpcResult<DashboardSummary>>;

@@ -36,4 +36,9 @@ export const authApi = {
     const result = await window.labManager.auth.getSecurityInfo();
     return unwrapIpc(result);
   },
+
+  async resetPassword(): Promise<void> {
+    const result = await window.labManager.auth.resetPassword();
+    return unwrapIpc(result);
+  },
 };

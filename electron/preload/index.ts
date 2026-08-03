@@ -10,6 +10,7 @@ const api: LabManagerApi = {
     logout: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGOUT),
     changePassword: (payload) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_CHANGE_PASSWORD, payload),
     getSecurityInfo: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_SECURITY_INFO),
+    resetPassword: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_RESET_PASSWORD),
   },
   dashboard: {
     getSummary: () => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_GET_SUMMARY),
