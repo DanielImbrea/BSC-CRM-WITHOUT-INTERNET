@@ -64,6 +64,8 @@ async function initializeDatabase(): Promise<void> {
   configurePrismaEnginePaths();
 
   const db = getPrismaClient();
+  // Conectare ÎNAINTE de migrări — altfel SQLite error 14 pe Windows.
+  await db.$connect();
 
   if (app.isPackaged) {
     try {
@@ -74,7 +76,6 @@ async function initializeDatabase(): Promise<void> {
     }
   }
 
-  await db.$connect();
   logger.info("Baza de date conectată.", getDatabaseFilePath());
 }
 

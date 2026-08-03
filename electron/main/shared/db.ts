@@ -51,11 +51,29 @@ function resolveDatabaseFilePath(): string {
 }
 
 function resolveDatabaseUrl(): string {
-  // Prisma SQLite pe Windows necesită URL file:// cu slash-uri corecte.
-  return pathToFileURL(resolveDatabaseFilePath()).href;
+  const filePath = resolveDatabaseFilePath();
+  // Prisma SQLite pe Windows: file:C:/path (NU file:/// — cauzează SQLite error 14).
+  const normalized = filePath.replace(/\\/g, "/");
+  if (/^[A-Za-z]:\//.test(normalized)) {
+    return `file:${normalized}`;
+  }
+  return pathToFileURL(filePath).href;
+}
+
+/** Creează folderul și fișierul .db dacă lipsesc (Windows poate eșua la primul open). */
+export function ensureDatabaseFileReady(): void {
+  const filePath = resolveDatabaseFilePath();
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(filePath)) {
+    fs.closeSync(fs.openSync(filePath, "a"));
+  }
 }
 
 export function prepareDatabaseEnvironment(): string {
+  ensureDatabaseFileReady();
   const url = resolveDatabaseUrl();
   process.env.DATABASE_URL = url;
   return url;

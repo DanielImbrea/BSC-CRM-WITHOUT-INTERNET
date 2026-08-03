@@ -16,6 +16,15 @@ function resolveMigrationsDir(): string {
  * Rulează fișierele migration.sql în ordine lexicografică.
  */
 export async function applySqlMigrationsFallback(db: PrismaClient): Promise<void> {
+  // Verifică dacă schema există deja — evită re-aplicarea migrărilor distructive.
+  try {
+    await db.$queryRawUnsafe("SELECT 1 FROM AppAuth LIMIT 1");
+    logger.info("Fallback SQL: schema deja există, sar peste.");
+    return;
+  } catch {
+    // Schema lipsește — continuăm cu migrările.
+  }
+
   const migrationsDir = resolveMigrationsDir();
   if (!fs.existsSync(migrationsDir)) {
     throw new Error(`Folder migrări negăsit: ${migrationsDir}`);
@@ -35,12 +44,12 @@ export async function applySqlMigrationsFallback(db: PrismaClient): Promise<void
 
     const sql = fs.readFileSync(sqlPath, "utf8");
     const statements = sql
-      .split(/;\s*\n/)
+      .split(";")
       .map((statement) => statement.trim())
       .filter((statement) => statement.length > 0 && !statement.startsWith("--"));
 
     for (const statement of statements) {
-      await db.$executeRawUnsafe(statement);
+      await db.$executeRawUnsafe(`${statement};`);
     }
 
     logger.info(`Fallback SQL: migrare aplicată — ${folder}`);
