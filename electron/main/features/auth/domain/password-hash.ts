@@ -1,7 +1,11 @@
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { ValidationError } from "../../../shared/errors";
 
 const BCRYPT_ROUNDS = 12;
+
+// În app-ul Electron împachetat, bcryptjs nu detectează crypto — hashSync eșuează.
+bcrypt.setRandomFallback((length) => Array.from(randomBytes(length)));
 
 /** Hash-urile bcrypt încep cu $2a$, $2b$ sau $2y$. */
 function isBcryptHash(hash: string): boolean {
@@ -14,7 +18,13 @@ function isLegacyArgon2Hash(hash: string): boolean {
 }
 
 export function hashPassword(password: string): string {
-  return bcrypt.hashSync(password, BCRYPT_ROUNDS);
+  try {
+    return bcrypt.hashSync(password, BCRYPT_ROUNDS);
+  } catch (error) {
+    throw new ValidationError(
+      `Nu s-a putut genera hash-ul parolei: ${error instanceof Error ? error.message : "eroare necunoscută"}`,
+    );
+  }
 }
 
 export function verifyPassword(password: string, storedHash: string): boolean {

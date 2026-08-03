@@ -1,7 +1,25 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
 import type { IpcResult } from "@shared-types/ipc";
+import { Prisma } from "./prisma";
 import { AppError } from "./errors";
 import { logger } from "./logger";
+
+function mapUnexpectedError(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2021") {
+      return "Baza de date nu este inițializată. Repornește aplicația sau reinstaleaz-o.";
+    }
+    logger.error("Eroare Prisma:", error.code, error.message);
+    return `Eroare bază de date (${error.code}). Repornește aplicația.`;
+  }
+
+  if (error instanceof Error) {
+    logger.error("Eroare neașteptată:", error.message, error.stack);
+    return error.message;
+  }
+
+  return "A apărut o eroare neașteptată. Încearcă din nou.";
+}
 
 /**
  * Înregistrează un handler IPC care întoarce mereu un IpcResult<T>,
@@ -27,7 +45,7 @@ export function registerIpcHandler<TRequest, TResponse>(
         logger.error(`[${channel}] Eroare neașteptată:`, error);
         return {
           ok: false,
-          error: "A apărut o eroare neașteptată. Încearcă din nou.",
+          error: mapUnexpectedError(error),
         };
       }
     },

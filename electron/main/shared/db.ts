@@ -3,7 +3,7 @@ import { PrismaClient } from "./prisma";
 import { app } from "electron";
 import path from "node:path";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 // ESM nu expune __dirname — reconstruim ca în electron/main/index.ts.
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -50,7 +50,8 @@ function resolveDatabaseFilePath(): string {
 }
 
 function resolveDatabaseUrl(): string {
-  return `file:${resolveDatabaseFilePath()}`;
+  // Prisma SQLite pe Windows necesită URL file:// cu slash-uri corecte.
+  return pathToFileURL(resolveDatabaseFilePath()).href;
 }
 
 export function prepareDatabaseEnvironment(): string {
