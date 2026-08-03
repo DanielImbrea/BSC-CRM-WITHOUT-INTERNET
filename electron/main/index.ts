@@ -5,7 +5,7 @@ import { registerAllIpcHandlers } from "./register-ipc-handlers";
 import { getPrismaClient, disconnectPrisma, prepareDatabaseEnvironment, getDatabaseFilePath } from "./shared/db";
 import { configurePrismaEnginePaths } from "./shared/prisma-engines";
 import { runDatabaseMigrations } from "./shared/run-migrations";
-import { applySqlMigrationsFallback } from "./shared/apply-sql-migrations";
+import { applySqlMigrationsFallback, ensureDatabaseSchema } from "./shared/apply-sql-migrations";
 import { logger } from "./shared/logger";
 import { getAutoBackupSettingsUnsafe } from "./features/settings/application/settings-use-cases";
 import { createBackup, pruneOldBackups } from "./features/backup/application/backup-use-cases";
@@ -67,14 +67,14 @@ async function initializeDatabase(): Promise<void> {
   // Conectare ÎNAINTE de migrări — altfel SQLite error 14 pe Windows.
   await db.$connect();
 
-  if (app.isPackaged) {
-    try {
-      runDatabaseMigrations(databaseUrl);
-    } catch (error) {
-      logger.warn("Migrare Prisma CLI eșuată — aplic fallback SQL:", error);
-      await applySqlMigrationsFallback(db);
-    }
+  try {
+    runDatabaseMigrations(databaseUrl);
+  } catch (error) {
+    logger.warn("Migrare Prisma CLI eșuată — aplic fallback SQL:", error);
+    await applySqlMigrationsFallback(db);
   }
+
+  await ensureDatabaseSchema(db);
 
   logger.info("Baza de date conectată.", getDatabaseFilePath());
 }

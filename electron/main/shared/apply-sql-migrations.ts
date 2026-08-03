@@ -11,18 +11,38 @@ function resolveMigrationsDir(): string {
   return path.resolve(process.cwd(), "prisma/migrations");
 }
 
+/** Elimină comentariile pe linie — altfel statement-urile Prisma (-- CreateTable\nCREATE...) sunt ignorate. */
+function stripSqlLineComments(sql: string): string {
+  return sql
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("--"))
+    .join("\n");
+}
+
+function parseSqlStatements(sql: string): string[] {
+  return stripSqlLineComments(sql)
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0);
+}
+
+async function schemaHasAppAuth(db: PrismaClient): Promise<boolean> {
+  try {
+    await db.$queryRawUnsafe("SELECT 1 FROM AppAuth LIMIT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Fallback dacă `prisma migrate deploy` eșuează în app-ul împachetat.
  * Rulează fișierele migration.sql în ordine lexicografică.
  */
 export async function applySqlMigrationsFallback(db: PrismaClient): Promise<void> {
-  // Verifică dacă schema există deja — evită re-aplicarea migrărilor distructive.
-  try {
-    await db.$queryRawUnsafe("SELECT 1 FROM AppAuth LIMIT 1");
+  if (await schemaHasAppAuth(db)) {
     logger.info("Fallback SQL: schema deja există, sar peste.");
     return;
-  } catch {
-    // Schema lipsește — continuăm cu migrările.
   }
 
   const migrationsDir = resolveMigrationsDir();
@@ -42,16 +62,28 @@ export async function applySqlMigrationsFallback(db: PrismaClient): Promise<void
     const sqlPath = path.join(migrationsDir, folder, "migration.sql");
     if (!fs.existsSync(sqlPath)) continue;
 
-    const sql = fs.readFileSync(sqlPath, "utf8");
-    const statements = sql
-      .split(";")
-      .map((statement) => statement.trim())
-      .filter((statement) => statement.length > 0 && !statement.startsWith("--"));
+    const statements = parseSqlStatements(fs.readFileSync(sqlPath, "utf8"));
 
     for (const statement of statements) {
       await db.$executeRawUnsafe(`${statement};`);
     }
 
     logger.info(`Fallback SQL: migrare aplicată — ${folder}`);
+  }
+}
+
+/** Verifică că tabelele există; aplică fallback dacă migrarea CLI a eșuat silențios. */
+export async function ensureDatabaseSchema(db: PrismaClient): Promise<void> {
+  if (await schemaHasAppAuth(db)) {
+    return;
+  }
+
+  logger.warn("Schema incompletă după migrare — aplic fallback SQL.");
+  await applySqlMigrationsFallback(db);
+
+  if (!(await schemaHasAppAuth(db))) {
+    throw new Error(
+      "Baza de date nu a putut fi inițializată. Șterge folderul database din AppData și repornește aplicația.",
+    );
   }
 }
