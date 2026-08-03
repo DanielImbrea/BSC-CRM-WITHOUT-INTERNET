@@ -1,19 +1,15 @@
 import type {
-  ReportDateRangeRequest,
-  FinancialSummaryReportDto,
-  ClientReportRowDto,
-  EmployeeReportRowDto,
+  DoctorUnpaidReport,
+  MonthReportRequest,
+  TechnicianSalaryReport,
 } from "@shared-types/ipc";
 import { unwrapIpc } from "@/shared/lib/ipc";
 
 export const reportsApi = {
-  async getFinancialSummary(range: ReportDateRangeRequest): Promise<FinancialSummaryReportDto> {
-    return unwrapIpc(await window.labManager.reports.getFinancialSummary(range));
+  async getDoctorUnpaid(payload: MonthReportRequest): Promise<DoctorUnpaidReport> {
+    return unwrapIpc(await window.labManager.reports.getDoctorUnpaid(payload));
   },
-  async getClientReport(range: ReportDateRangeRequest): Promise<ClientReportRowDto[]> {
-    return unwrapIpc(await window.labManager.reports.getClientReport(range));
-  },
-  async getEmployeeReport(range: ReportDateRangeRequest): Promise<EmployeeReportRowDto[]> {
-    return unwrapIpc(await window.labManager.reports.getEmployeeReport(range));
+  async getTechnicianSalary(payload: MonthReportRequest): Promise<TechnicianSalaryReport> {
+    return unwrapIpc(await window.labManager.reports.getTechnicianSalary(payload));
   },
 };

@@ -1,28 +1,43 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { worksApi } from "../api/works-api";
 import { worksQueryKeys } from "./use-works";
-import { materialsQueryKeys } from "@/features/materials/hooks/use-materials";
-import type { CreateWorkRequest, WorkStatus } from "@shared-types/ipc";
+import type {
+  CreateWorkRequest,
+  PaymentStatus,
+  SearchWorksFilters,
+  UpdateWorkRequest,
+} from "@shared-types/ipc";
 
 export function useCreateWork() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateWorkRequest) => worksApi.create(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.list() });
-      // Crearea unei lucrări consumă materiale — stocul afișat în Materiale trebuie reîmprospătat.
-      void queryClient.invalidateQueries({ queryKey: materialsQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });
 }
 
-export function useUpdateWorkStatus() {
+export function useUpdateWork() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: WorkStatus }) => worksApi.updateStatus(id, status),
+    mutationFn: (payload: UpdateWorkRequest) => worksApi.update(payload),
     onSuccess: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.detail(updated.id) });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+    },
+  });
+}
+
+export function useUpdateWorkPaymentStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, paymentStatus }: { id: string; paymentStatus: PaymentStatus }) =>
+      worksApi.updatePaymentStatus({ id, paymentStatus }),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: worksQueryKeys.detail(updated.id) });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
@@ -34,10 +49,14 @@ export function useDeleteWork() {
   return useMutation({
     mutationFn: (id: string) => worksApi.delete(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.list() });
-      // Ștergerea unei lucrări restaurează stocul materialelor consumate.
-      void queryClient.invalidateQueries({ queryKey: materialsQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: worksQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
+  });
+}
+
+export function useSearchWorks() {
+  return useMutation({
+    mutationFn: (filters: SearchWorksFilters) => worksApi.search(filters),
   });
 }

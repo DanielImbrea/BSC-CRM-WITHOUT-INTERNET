@@ -48,7 +48,7 @@ export function useImportAndRestore() {
   return useMutation({
     mutationFn: backupApi.importAndRestore,
     onSuccess: (result) => {
-      if (result.restored) {
+      if (result.restoredFrom) {
         void queryClient.invalidateQueries();
       }
     },

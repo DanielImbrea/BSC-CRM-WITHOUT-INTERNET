@@ -2,18 +2,29 @@ import * as React from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { useWorks } from "../hooks/use-works";
+import { useUpdateWorkPaymentStatus } from "../hooks/use-work-mutations";
 import { WorksTable } from "../components/works-table";
-import { CreateWorkDialog } from "../components/create-work-dialog";
-import { WorkDetailDialog } from "../components/work-detail-dialog";
+import { WorkFormDialog } from "../components/work-form-dialog";
 import { DeleteWorkDialog } from "../components/delete-work-dialog";
 import type { WorkListItem } from "@shared-types/ipc";
 
 export function WorksPage() {
   const { data: works, isLoading, isError, error } = useWorks();
+  const updatePaymentStatus = useUpdateWorkPaymentStatus();
 
-  const [createOpen, setCreateOpen] = React.useState(false);
-  const [viewingWorkId, setViewingWorkId] = React.useState<string | null>(null);
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editingWorkId, setEditingWorkId] = React.useState<string | null>(null);
   const [deletingWork, setDeletingWork] = React.useState<WorkListItem | null>(null);
+
+  function openCreateForm() {
+    setEditingWorkId(null);
+    setFormOpen(true);
+  }
+
+  function openEditForm(work: WorkListItem) {
+    setEditingWorkId(work.id);
+    setFormOpen(true);
+  }
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -22,7 +33,7 @@ export function WorksPage() {
           <h1 className="text-xl font-semibold text-foreground">Lucrări</h1>
           <p className="text-sm text-muted-foreground">Evidența lucrărilor laboratorului.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+        <Button onClick={openCreateForm} className="gap-2">
           <Plus className="h-4 w-4" />
           Lucrare nouă
         </Button>
@@ -36,10 +47,18 @@ export function WorksPage() {
         </p>
       )}
 
-      {works && <WorksTable works={works} onView={(w) => setViewingWorkId(w.id)} onDelete={setDeletingWork} />}
+      {works && (
+        <WorksTable
+          works={works}
+          onEdit={openEditForm}
+          onDelete={setDeletingWork}
+          onPaymentStatusChange={(work, paymentStatus) => {
+            void updatePaymentStatus.mutateAsync({ id: work.id, paymentStatus });
+          }}
+        />
+      )}
 
-      <CreateWorkDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <WorkDetailDialog workId={viewingWorkId} onOpenChange={() => setViewingWorkId(null)} />
+      <WorkFormDialog open={formOpen} onOpenChange={setFormOpen} workId={editingWorkId} />
       <DeleteWorkDialog work={deletingWork} onOpenChange={() => setDeletingWork(null)} />
     </div>
   );

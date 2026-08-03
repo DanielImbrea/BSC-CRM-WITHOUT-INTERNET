@@ -1,8 +1,5 @@
-// ============================================================================
-// Lab Manager — Database Schema
-// SQLite, offline, single-machine, single-user (Argon2id auth, no roles).
-// Sume bănești stocate ca Int (subunități monetare) — evită erori de rotunjire.
-// ============================================================================
+// Billionaire Smile Club CRM — laborator dentar, offline, single-user.
+// Sume în Int (bani / subunități monetare).
 
 generator client {
   provider = "prisma-client-js"
@@ -13,19 +10,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------------------------
-// Auth — un singur rând (id fix "singleton"), o singură logare offline.
-// ---------------------------------------------------------------------------
 model AppAuth {
   id           String   @id @default("singleton")
   passwordHash String
   updatedAt    DateTime @updatedAt
 }
 
-// ---------------------------------------------------------------------------
-// Clienți
-// ---------------------------------------------------------------------------
-model Client {
+// Cabinete / medici stomatologi (fostul modul Clienți).
+model Doctor {
   id        String   @id @default(cuid())
   name      String
   phone     String?
@@ -38,143 +30,96 @@ model Client {
   @@index([name])
 }
 
-// ---------------------------------------------------------------------------
-// Lucrări
-// ---------------------------------------------------------------------------
-// Notă: SQLite nu suportă `enum` nativ în Prisma (doar Postgres/MySQL).
-// Statusul e stocat ca String, iar valorile valide sunt impuse din cod
-// (tipul WorkStatus din shared-types/ipc.ts + validare în work-validation.ts).
-model Work {
-  id         String         @id @default(cuid())
-  title      String
-  status     String         @default("IN_PROGRESS")
-  client     Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  clientId   String
-  startedAt  DateTime       @default(now())
-  finishedAt DateTime?
-  materials  WorkMaterial[]
-  costs      CostEntry[]
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+model Technician {
+  id         String   @id @default(cuid())
+  name       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  worksAs1   Work[]   @relation("WorkTechnician1")
+  worksAs2   Work[]   @relation("WorkTechnician2")
+  worksAs3   Work[]   @relation("WorkTechnician3")
 
-  @@index([clientId])
-  @@index([status])
+  @@index([name])
+  @@index([active])
 }
 
-// ---------------------------------------------------------------------------
-// Materiale
-// ---------------------------------------------------------------------------
-model Material {
-  id            String         @id @default(cuid())
-  name          String
-  unit          String
-  unitCost      Int
-  stockQuantity Float          @default(0)
-  minStockQuantity Float       @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  usages        WorkMaterial[]
+// Catalog tipuri lucrări — preț doctor vs preț tehnician (per bucată).
+model WorkType {
+  id              String     @id @default(cuid())
+  name            String
+  doctorPrice     Int
+  technicianPrice Int
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lines           WorkLine[]
 
   @@index([name])
 }
 
-// Tabel de legătură Work <-> Material, cu snapshot de preț la momentul consumului.
-model WorkMaterial {
-  id             String   @id @default(cuid())
-  work           Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
-  workId         String
-  material       Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
-  materialId     String
-  quantity       Float
-  unitCostAtTime Int
-  createdAt      DateTime @default(now())
+// NEPLATITA | PLATITA_DOCTOR | PLATITA_TEHNICIAN
+model Work {
+  id            String      @id @default(cuid())
+  entryDate     DateTime
+  patientName   String
+  observations  String?
+  paymentStatus String      @default("NEPLATITA")
+  doctor        Doctor      @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  doctorId      String
+  technician1   Technician? @relation("WorkTechnician1", fields: [technician1Id], references: [id], onDelete: SetNull)
+  technician1Id String?
+  technician2   Technician? @relation("WorkTechnician2", fields: [technician2Id], references: [id], onDelete: SetNull)
+  technician2Id String?
+  technician3   Technician? @relation("WorkTechnician3", fields: [technician3Id], references: [id], onDelete: SetNull)
+  technician3Id String?
+  lines         WorkLine[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([doctorId])
+  @@index([entryDate])
+  @@index([paymentStatus])
+  @@index([patientName])
+}
+
+model WorkLine {
+  id                  String   @id @default(cuid())
+  work                Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+  workId              String
+  workType            WorkType @relation(fields: [workTypeId], references: [id], onDelete: Restrict)
+  workTypeId          String
+  quantity            Int
+  doctorUnitPrice     Int
+  technicianUnitPrice Int
+  createdAt           DateTime @default(now())
 
   @@index([workId])
-  @@index([materialId])
+  @@index([workTypeId])
 }
 
-// ---------------------------------------------------------------------------
-// Costuri (generale sau per-lucrare)
-// ---------------------------------------------------------------------------
-model CostEntry {
-  id          String   @id @default(cuid())
-  description String
-  amount      Int
-  category    String
-  work        Work?    @relation(fields: [workId], references: [id], onDelete: SetNull)
-  workId      String?
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([workId])
-  @@index([date])
-}
-
-// ---------------------------------------------------------------------------
-// Angajați și Salarii
-// ---------------------------------------------------------------------------
-model Employee {
-  id        String        @id @default(cuid())
-  name      String
-  position  String?
-  active    Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  salaries  SalaryEntry[]
-
-  @@index([active])
-}
-
-model SalaryEntry {
-  id         String    @id @default(cuid())
-  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  employeeId String
-  period     String // format "YYYY-MM"
-  baseAmount Int
-  bonuses    Int       @default(0)
-  deductions Int       @default(0)
-  netAmount  Int
-  paidAt     DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  @@unique([employeeId, period])
-  @@index([period])
-}
-
-// ---------------------------------------------------------------------------
-// Setări aplicație (cheie-valoare)
-// ---------------------------------------------------------------------------
 model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
 }
 
-// ---------------------------------------------------------------------------
-// Audit Log — doar acțiuni critice (ștergeri, salarii, autentificare, backup)
-// ---------------------------------------------------------------------------
 model AuditLog {
   id         String   @id @default(cuid())
-  action     String // ex: "DELETE" | "SALARY_UPDATE" | "AUTH_CHANGE" | "BACKUP_RESTORE"
-  entityType String // ex: "Work" | "SalaryEntry" | "Client"
+  action     String
+  entityType String
   entityId   String?
-  before     String? // JSON snapshot
-  after      String? // JSON snapshot
+  before     String?
+  after      String?
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
   @@index([createdAt])
 }
 
-// ---------------------------------------------------------------------------
-// Backup
-// ---------------------------------------------------------------------------
 model BackupRecord {
   id        String   @id @default(cuid())
   filePath  String
   sizeBytes Int
-  type      String // "MANUAL" | "AUTO"
+  type      String
   createdAt DateTime @default(now())
 }

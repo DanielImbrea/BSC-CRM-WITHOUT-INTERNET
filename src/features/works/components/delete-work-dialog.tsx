@@ -28,12 +28,8 @@ export function DeleteWorkDialog({ work, onOpenChange }: DeleteWorkDialogProps) 
     <Dialog open={work !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ștergi lucrarea „{work?.title}"?</DialogTitle>
-          <DialogDescription>
-            Acțiunea nu poate fi anulată. Materialele consumate de această lucrare vor fi restaurate
-            automat în stoc. Costurile înregistrate rămân în evidență, dar se decuplează de la
-            lucrare.
-          </DialogDescription>
+          <DialogTitle>Ștergi lucrarea pentru „{work?.patientName}"?</DialogTitle>
+          <DialogDescription>Acțiunea nu poate fi anulată.</DialogDescription>
         </DialogHeader>
 
         {deleteWork.error && (

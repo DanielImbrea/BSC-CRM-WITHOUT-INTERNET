@@ -1,7 +1,6 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
-import { FinancialSummaryTab } from "../components/financial-summary-tab";
-import { ClientReportTab } from "../components/client-report-tab";
-import { EmployeeReportTab } from "../components/employee-report-tab";
+import { DoctorUnpaidTab } from "../components/doctor-unpaid-tab";
+import { TechnicianSalaryTab } from "../components/technician-salary-tab";
 
 export function ReportsPage() {
   return (
@@ -9,24 +8,20 @@ export function ReportsPage() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Rapoarte</h1>
         <p className="text-sm text-muted-foreground">
-          Sinteze financiare, pe client și pe angajat, pentru orice interval de date.
+          Rapoarte de lucrări neplătite și salarii tehnicieni, pe lună.
         </p>
       </div>
 
-      <Tabs defaultValue="financial">
+      <Tabs defaultValue="doctor-unpaid">
         <TabsList>
-          <TabsTrigger value="financial">Sumar financiar</TabsTrigger>
-          <TabsTrigger value="clients">Pe client</TabsTrigger>
-          <TabsTrigger value="employees">Pe angajat</TabsTrigger>
+          <TabsTrigger value="doctor-unpaid">Neplătite doctor</TabsTrigger>
+          <TabsTrigger value="technician-salary">Salariu tehnician</TabsTrigger>
         </TabsList>
-        <TabsContent value="financial">
-          <FinancialSummaryTab />
+        <TabsContent value="doctor-unpaid">
+          <DoctorUnpaidTab />
         </TabsContent>
-        <TabsContent value="clients">
-          <ClientReportTab />
-        </TabsContent>
-        <TabsContent value="employees">
-          <EmployeeReportTab />
+        <TabsContent value="technician-salary">
+          <TechnicianSalaryTab />
         </TabsContent>
       </Tabs>
     </div>

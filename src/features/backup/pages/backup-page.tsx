@@ -53,11 +53,10 @@ export function BackupPage() {
             : "Nu am putut restaura din fișierul selectat."}
         </p>
       )}
-      {importAndRestore.data?.restored === false && (
-        <p className="text-sm text-muted-foreground">Restaurare anulată.</p>
-      )}
-      {importAndRestore.data?.restored === true && (
-        <p className="text-sm text-emerald-400">Baza de date a fost restaurată din fișierul selectat.</p>
+      {importAndRestore.data?.restoredFrom && (
+        <p className="text-sm text-emerald-400">
+          Baza de date a fost restaurată din: {importAndRestore.data.restoredFrom}
+        </p>
       )}
       {createBackup.isError && (
         <p className="text-sm text-destructive">

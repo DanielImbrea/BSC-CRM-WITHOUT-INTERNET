@@ -1,54 +1,71 @@
+import type { PaymentStatus, SearchWorksFilters } from "@shared-types/ipc";
 import { ValidationError } from "../../../shared/errors";
 
-export interface WorkMaterialLine {
-  materialName: string;
+export interface WorkLineInput {
+  workTypeId: string;
   quantity: number;
-}
-
-export interface WorkCostLine {
-  description: string;
-  amount: number;
-  category: string;
+  doctorUnitPrice: number;
+  technicianUnitPrice: number;
 }
 
 export interface WorkInput {
-  title: string;
-  clientId: string;
-  materials: WorkMaterialLine[];
-  costs: WorkCostLine[];
+  entryDate: Date;
+  patientName: string;
+  observations?: string;
+  paymentStatus: PaymentStatus;
+  doctorId: string;
+  technician1Id?: string;
+  technician2Id?: string;
+  technician3Id?: string;
+  lines: WorkLineInput[];
+}
+
+const PAYMENT_STATUSES: PaymentStatus[] = ["NEPLATITA", "PLATITA_DOCTOR", "PLATITA_TEHNICIAN"];
+
+export function assertPaymentStatus(status: string): asserts status is PaymentStatus {
+  if (!PAYMENT_STATUSES.includes(status as PaymentStatus)) {
+    throw new ValidationError("Status de plată invalid.");
+  }
 }
 
 export function assertWorkIsValid(input: WorkInput): void {
-  if (input.title.trim().length < 2) {
-    throw new ValidationError("Titlul lucrării trebuie să aibă cel puțin 2 caractere.");
+  if (input.patientName.trim().length < 2) {
+    throw new ValidationError("Numele pacientului trebuie să aibă cel puțin 2 caractere.");
   }
-  if (!input.clientId) {
-    throw new ValidationError("Trebuie selectat un client.");
+  if (!input.doctorId) {
+    throw new ValidationError("Trebuie selectat un doctor.");
   }
-
-  for (const line of input.materials) {
-    if (line.materialName.trim().length < 2) {
-      throw new ValidationError("Numele materialului trebuie să aibă cel puțin 2 caractere.");
-    }
+  assertPaymentStatus(input.paymentStatus);
+  if (input.lines.length === 0) {
+    throw new ValidationError("Adaugă cel puțin o linie de lucrare.");
+  }
+  for (const line of input.lines) {
     if (line.quantity <= 0) {
-      throw new ValidationError("Cantitatea de material trebuie să fie mai mare ca 0.");
+      throw new ValidationError("Cantitatea trebuie să fie mai mare ca 0.");
+    }
+    if (!Number.isInteger(line.doctorUnitPrice) || line.doctorUnitPrice < 0) {
+      throw new ValidationError("Prețul doctor pe linie trebuie să fie valid.");
+    }
+    if (!Number.isInteger(line.technicianUnitPrice) || line.technicianUnitPrice < 0) {
+      throw new ValidationError("Prețul tehnician pe linie trebuie să fie valid.");
     }
   }
+}
 
-  const materialNames = input.materials.map((m) => m.materialName.trim().toLowerCase());
-  if (new Set(materialNames).size !== materialNames.length) {
-    throw new ValidationError("Același material apare de mai multe ori — combină-le într-o singură linie.");
+export function parseMonthRange(month: string): { from: Date; to: Date } {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) {
+    throw new ValidationError("Luna trebuie să fie în format YYYY-MM.");
   }
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const from = new Date(year, monthIndex, 1, 0, 0, 0, 0);
+  const to = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+  return { from, to };
+}
 
-  for (const line of input.costs) {
-    if (line.description.trim().length === 0) {
-      throw new ValidationError("Fiecare cost trebuie să aibă o descriere.");
-    }
-    if (!Number.isInteger(line.amount) || line.amount <= 0) {
-      throw new ValidationError("Suma unui cost trebuie să fie un număr întreg pozitiv (în bani).");
-    }
-    if (line.category.trim().length === 0) {
-      throw new ValidationError("Fiecare cost trebuie să aibă o categorie.");
-    }
-  }
+export function buildSearchDateRange(filters: SearchWorksFilters): { from?: Date; to?: Date } {
+  if (!filters.month) return {};
+  const { from, to } = parseMonthRange(filters.month);
+  return { from, to };
 }
