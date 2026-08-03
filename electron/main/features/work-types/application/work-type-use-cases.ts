@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../../shared/prisma";
 import { workTypesRepository, type WorkTypeRecord } from "../infrastructure/work-types-repository";
 import { assertWorkTypeIsValid, type WorkTypeInput } from "../domain/work-type-validation";
 import { NotFoundError, ConflictError } from "../../../shared/errors";

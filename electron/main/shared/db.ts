@@ -1,4 +1,5 @@
-import { PrismaClient, type Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient as PrismaClientInstance } from "@prisma/client";
+import { PrismaClient } from "./prisma";
 import { app } from "electron";
 import path from "node:path";
 import fs from "node:fs";
@@ -12,7 +13,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  * clientul Prisma normal, fie în interiorul unei tranzacții ($transaction) —
  * esențial pentru operațiuni compuse ca cele din modulul Lucrări.
  */
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+export type DbClient = PrismaClientInstance | Prisma.TransactionClient;
 
 let cachedDbFilePath: string | null = null;
 
@@ -57,9 +58,9 @@ export function getDatabaseFilePath(): string {
   return resolveDatabaseFilePath();
 }
 
-let prismaInstance: PrismaClient | null = null;
+let prismaInstance: PrismaClientInstance | null = null;
 
-export function getPrismaClient(): PrismaClient {
+export function getPrismaClient(): PrismaClientInstance {
   if (!prismaInstance) {
     process.env.DATABASE_URL = resolveDatabaseUrl();
     prismaInstance = new PrismaClient({

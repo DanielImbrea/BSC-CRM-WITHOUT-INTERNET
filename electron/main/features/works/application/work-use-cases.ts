@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../../shared/prisma";
 import type { PaymentStatus, SearchWorksFilters } from "@shared-types/ipc";
 import { getPrismaClient } from "../../../shared/db";
 import {

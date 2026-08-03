@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../../shared/prisma";
 import { doctorsRepository, type DoctorRecord } from "../infrastructure/doctors-repository";
 import { assertDoctorIsValid, type DoctorInput } from "../domain/doctor-validation";
 import { NotFoundError, ConflictError } from "../../../shared/errors";
