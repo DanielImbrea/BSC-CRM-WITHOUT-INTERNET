@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "prisma-client";
 import type { PaymentStatus, SearchWorksFilters } from "@shared-types/ipc";
 import { getPrismaClient, type DbClient } from "../../../shared/db";
 import { buildSearchDateRange } from "../domain/work-validation";

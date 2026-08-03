@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient as PrismaClientInstance } from "@prisma/client";
+import type { Prisma, PrismaClient as PrismaClientInstance } from "prisma-client";
 import { PrismaClient } from "./prisma";
 import { app } from "electron";
 import path from "node:path";

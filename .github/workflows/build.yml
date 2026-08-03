@@ -36,6 +36,7 @@ jobs:
           test -f dist/index.html
           test -f dist-electron/main/index.js
           test -f dist-electron/preload/index.cjs
+          test -d node_modules/prisma-client
 
       - name: Build si pachetare Electron (Windows)
         if: runner.os == 'Windows'

@@ -3,6 +3,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Fără dot-prefix — electron-builder exclude implicit .prisma/ din pachet.
+  output   = "../node_modules/prisma-client"
 }
 
 datasource db {

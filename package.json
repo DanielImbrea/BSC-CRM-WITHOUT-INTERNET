@@ -1,6 +1,6 @@
 {
   "name": "lab-manager",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "description": "Aplicație desktop offline pentru managementul unui laborator",
   "author": "",
@@ -12,6 +12,7 @@
     "build:renderer": "tsc -b && vite build",
     "preview": "vite preview",
     "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",

@@ -8,6 +8,11 @@ files:
   - dist/**
   - dist-electron/**
   - prisma/**
+  - node_modules/@prisma/**/*
+  - from: node_modules/prisma-client
+    to: node_modules/prisma-client
+    filter:
+      - "**/*"
 
 extraResources:
   - from: prisma
@@ -16,7 +21,7 @@ extraResources:
 # Prisma query engine e binar nativ — trebuie inclus explicit pentru fiecare platformă.
 asarUnpack:
   - "**/node_modules/@prisma/engines/**"
-  - "**/node_modules/.prisma/client/**"
+  - "**/node_modules/prisma-client/**"
   - "**/node_modules/prisma/**"
 
 mac:
