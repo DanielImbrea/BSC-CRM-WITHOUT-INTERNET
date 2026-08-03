@@ -17,6 +17,10 @@ files:
     to: node_modules/@prisma/engines
     filter:
       - "**/*"
+  - from: node_modules/prisma
+    to: node_modules/prisma
+    filter:
+      - "**/*"
 
 extraResources:
   - from: prisma
@@ -28,6 +32,7 @@ asarUnpack:
   - "**/*.dll"
   - "**/node_modules/@prisma/engines/**"
   - "**/node_modules/prisma-client/**"
+  - "**/node_modules/prisma/**"
 
 mac:
   target: zip

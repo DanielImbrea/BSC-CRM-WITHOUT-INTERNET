@@ -33,7 +33,7 @@ function getUnpackedRoots(): string[] {
 export function configurePrismaEnginePaths(): void {
   if (!app.isPackaged) return;
 
-  const queryEnginePattern = /^libquery_engine-.*\.(node|dll\.node|dylib\.node)$/;
+  const queryEnginePattern = /^(lib)?query_engine-.*\.(node|dll\.node|dylib\.node)$/;
   const schemaEnginePattern = /^schema-engine-.*\.exe$/;
 
   let queryEngine: string | null = null;

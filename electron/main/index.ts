@@ -2,7 +2,12 @@ import { app, BrowserWindow, shell, dialog } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerAllIpcHandlers } from "./register-ipc-handlers";
-import { getPrismaClient, disconnectPrisma, prepareDatabaseEnvironment, getDatabaseFilePath } from "./shared/db";
+import {
+  getPrismaClient,
+  disconnectPrisma,
+  prepareDatabaseEnvironment,
+  getDatabaseFilePath,
+} from "./shared/db";
 import { configurePrismaEnginePaths } from "./shared/prisma-engines";
 import { runDatabaseMigrations } from "./shared/run-migrations";
 import { ensureDatabaseSchema } from "./shared/apply-sql-migrations";
@@ -10,11 +15,15 @@ import { logger } from "./shared/logger";
 import { getAutoBackupSettingsUnsafe } from "./features/settings/application/settings-use-cases";
 import { createBackup, pruneOldBackups } from "./features/backup/application/backup-use-cases";
 
-// __dirname nu există implicit în build-ul ESM al lui vite-plugin-electron;
-// îl reconstruim explicit pentru compatibilitate.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+
+// O singură instanță — evită coruperea SQLite pe Windows (double-click rapid).
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -31,7 +40,6 @@ function createMainWindow(): void {
       preload: path.join(__dirname, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
-      // Preload compilat ca CJS (.cjs) — vezi vite.config.ts, secțiunea preload.
       sandbox: false,
     },
   });
@@ -40,8 +48,6 @@ function createMainWindow(): void {
     mainWindow?.show();
   });
 
-  // Orice link extern se deschide în browser-ul implicit al sistemului,
-  // niciodată într-o fereastră Electron nouă (suprafață de atac redusă).
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: "deny" };
@@ -63,9 +69,8 @@ async function initializeDatabase(): Promise<void> {
   const databaseUrl = prepareDatabaseEnvironment();
   configurePrismaEnginePaths();
 
-  let db = getPrismaClient();
-  // Conectare ÎNAINTE de migrări — altfel SQLite error 14 pe Windows.
-  await db.$connect();
+  // Nu ținem conexiune deschisă în timpul migrate deploy — SQLite lock pe Windows.
+  await disconnectPrisma();
 
   try {
     runDatabaseMigrations(databaseUrl);
@@ -73,6 +78,8 @@ async function initializeDatabase(): Promise<void> {
     logger.warn("Migrare Prisma CLI eșuată — voi aplica bootstrap SQL dacă e necesar:", error);
   }
 
+  let db = getPrismaClient();
+  await db.$connect();
   db = await ensureDatabaseSchema(db);
 
   logger.info("Baza de date conectată.", getDatabaseFilePath());
@@ -107,6 +114,13 @@ app.whenReady().then(async () => {
   });
 });
 
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -122,8 +136,6 @@ async function performAutoBackupIfEnabled(): Promise<void> {
     await pruneOldBackups(settings.maxBackupsRetained);
     logger.info("Backup automat creat la închiderea aplicației.");
   } catch (error) {
-    // Backup-ul automat nu trebuie NICIODATĂ să blocheze închiderea aplicației
-    // (ex: dacă utilizatorul nu era autentificat, sau discul e plin).
     logger.warn("Backup automat eșuat la închidere:", error);
   }
 }

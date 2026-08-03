@@ -7,7 +7,7 @@ import { logger } from "./logger";
 function mapUnexpectedError(error: unknown): string {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2021") {
-      return "Baza de date nu este inițializată. Repornește aplicația sau reinstaleaz-o.";
+      return "Schema bazei de date este incompletă sau învechită. Repornește aplicația sau reinstalează ultima versiune.";
     }
     logger.error("Eroare Prisma:", error.code, error.message);
     return `Eroare bază de date (${error.code}). Repornește aplicația.`;

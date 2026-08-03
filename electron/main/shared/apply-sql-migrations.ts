@@ -5,6 +5,22 @@ import type { PrismaClient } from "prisma-client";
 import { getPrismaClient, resetDatabaseFile } from "./db";
 import { logger } from "./logger";
 
+/** Tabele obligatorii din schema curentă — verificare completă, nu doar AppAuth. */
+const REQUIRED_TABLES = [
+  "AppAuth",
+  "Doctor",
+  "Technician",
+  "WorkType",
+  "Work",
+  "WorkLine",
+  "Setting",
+  "AuditLog",
+  "BackupRecord",
+] as const;
+
+/** Tabele din versiunea veche (pre-restructurare) — semn de schema învechită. */
+const LEGACY_TABLES = ["Client", "Material", "Employee", "CostEntry"] as const;
+
 function resolveBootstrapSqlPath(): string {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, "prisma/bootstrap.sql");
@@ -12,7 +28,6 @@ function resolveBootstrapSqlPath(): string {
   return path.resolve(process.cwd(), "prisma/bootstrap.sql");
 }
 
-/** Elimină comentariile pe linie din scripturile SQL Prisma. */
 function stripSqlLineComments(sql: string): string {
   return sql
     .split("\n")
@@ -27,24 +42,24 @@ function parseSqlStatements(sql: string): string[] {
     .filter((statement) => statement.length > 0);
 }
 
-async function schemaHasAppAuth(db: PrismaClient): Promise<boolean> {
-  try {
-    await db.$queryRawUnsafe("SELECT 1 FROM AppAuth LIMIT 1");
-    return true;
-  } catch {
-    return false;
-  }
+async function getExistingTables(db: PrismaClient): Promise<Set<string>> {
+  const rows = await db.$queryRawUnsafe<Array<{ name: string }>>(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
+  );
+  return new Set(rows.map((row) => row.name));
 }
 
-async function databaseHasPartialSchema(db: PrismaClient): Promise<boolean> {
-  const rows = await db.$queryRawUnsafe<Array<{ count: bigint | number }>>(
-    `SELECT COUNT(*) AS count FROM sqlite_master
-     WHERE type = 'table'
-       AND name NOT LIKE 'sqlite_%'
-       AND name != '_prisma_migrations'`,
-  );
-  const count = Number(rows[0]?.count ?? 0);
-  return count > 0;
+async function validateFullSchema(db: PrismaClient): Promise<{ ok: boolean; missing: string[] }> {
+  const existing = await getExistingTables(db);
+  const missing = REQUIRED_TABLES.filter((table) => !existing.has(table));
+  return { ok: missing.length === 0, missing };
+}
+
+async function hasLegacySchema(db: PrismaClient): Promise<boolean> {
+  const existing = await getExistingTables(db);
+  const hasLegacy = LEGACY_TABLES.some((table) => existing.has(table));
+  const hasCurrent = existing.has("Doctor") && existing.has("WorkLine");
+  return hasLegacy && !hasCurrent;
 }
 
 async function applyBootstrapSchema(db: PrismaClient): Promise<void> {
@@ -61,30 +76,56 @@ async function applyBootstrapSchema(db: PrismaClient): Promise<void> {
   }
 }
 
+async function reconnectPrisma(): Promise<PrismaClient> {
+  const db = getPrismaClient();
+  await db.$connect();
+  return db;
+}
+
+async function resetAndReconnect(): Promise<PrismaClient> {
+  await resetDatabaseFile();
+  return reconnectPrisma();
+}
+
 /**
- * Verifică schema după migrare; dacă lipsește AppAuth, resetează baza coruptă
- * și aplică bootstrap.sql (schema finală, fără migrări istorice conflictuale).
+ * Verifică schema completă; resetează baze corupte/parțiale/învechite
+ * și aplică bootstrap.sql ca ultimă variantă sigură.
  */
 export async function ensureDatabaseSchema(db: PrismaClient): Promise<PrismaClient> {
-  if (await schemaHasAppAuth(db)) {
-    return db;
-  }
-
   let activeDb = db;
 
-  if (await databaseHasPartialSchema(activeDb)) {
-    logger.warn("Bază parțial inițializată detectată — resetez fișierul .db.");
-    await resetDatabaseFile();
-    activeDb = getPrismaClient();
-    await activeDb.$connect();
+  const initial = await validateFullSchema(activeDb);
+  if (initial.ok) {
+    return activeDb;
+  }
+
+  const legacy = await hasLegacySchema(activeDb);
+  const hasAnyTable = (await getExistingTables(activeDb)).size > 0;
+
+  if (legacy) {
+    logger.warn("Schema înveche detectată — resetez baza pentru schema CRM dentar.");
+    activeDb = await resetAndReconnect();
+  } else if (hasAnyTable) {
+    logger.warn(
+      `Bază parțial inițializată (lipsesc: ${initial.missing.join(", ")}) — resetez fișierul .db.`,
+    );
+    activeDb = await resetAndReconnect();
   }
 
   logger.warn("Schema incompletă — aplic bootstrap SQL.");
-  await applyBootstrapSchema(activeDb);
+  try {
+    await applyBootstrapSchema(activeDb);
+  } catch (error) {
+    logger.error("Bootstrap eșuat — reîncerc după reset complet:", error);
+    activeDb = await resetAndReconnect();
+    await applyBootstrapSchema(activeDb);
+  }
 
-  if (!(await schemaHasAppAuth(activeDb))) {
+  const final = await validateFullSchema(activeDb);
+  if (!final.ok) {
     throw new Error(
-      "Baza de date nu a putut fi inițializată. Șterge folderul database din AppData și repornește aplicația.",
+      `Baza de date nu a putut fi inițializată (lipsesc: ${final.missing.join(", ")}). ` +
+        "Șterge folderul database din AppData și repornește aplicația.",
     );
   }
 

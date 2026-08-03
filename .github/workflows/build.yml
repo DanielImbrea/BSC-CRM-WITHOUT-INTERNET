@@ -44,6 +44,8 @@ jobs:
         run: |
           npx asar list release/win-unpacked/resources/app.asar | grep -E "prisma-client|@prisma/engines" | head -5
           ls release/win-unpacked/resources/app.asar.unpacked/node_modules/prisma-client/ | grep -E "node|dll"
+          test -f release/win-unpacked/resources/app.asar.unpacked/node_modules/prisma/build/index.js
+          test -f release/win-unpacked/resources/prisma/bootstrap.sql
 
       - name: Incarca instalatorul Windows
         uses: actions/upload-artifact@v4

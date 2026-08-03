@@ -29,7 +29,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             Nu am putut porni aplicația: {errorMessage ?? "eroare necunoscută"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Verifică fereastra DevTools (Cmd+Option+I) pentru detalii tehnice, sau repornește aplicația.
+            Dacă problema persistă, reinstalează aplicația sau contactează administratorul.
           </p>
         </div>
       </div>
