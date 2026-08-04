@@ -87,7 +87,7 @@ export function DoctorUnpaidTab() {
                     {" "}
                   </ReportPrintTh>
                   <ReportPrintTh>Doctor</ReportPrintTh>
-                  <ReportPrintTh>Data intrare</ReportPrintTh>
+                  <ReportPrintTh className="print:hidden">Data intrare</ReportPrintTh>
                   <ReportPrintTh>Pacient</ReportPrintTh>
                   <ReportPrintTh>Lucrări</ReportPrintTh>
                   <ReportPrintTh align="right">Sumă</ReportPrintTh>
@@ -95,9 +95,14 @@ export function DoctorUnpaidTab() {
               }
               totalLabel={
                 report.lines.length > 0 ? (
-                  <ReportPrintTd colSpan={5} align="right">
-                    Total
-                  </ReportPrintTd>
+                  <>
+                    <ReportPrintTd colSpan={5} align="right" className="print:hidden">
+                      Total
+                    </ReportPrintTd>
+                    <ReportPrintTd colSpan={4} align="right" className="hidden print:table-cell">
+                      Total
+                    </ReportPrintTd>
+                  </>
                 ) : undefined
               }
               totalValue={
@@ -112,7 +117,9 @@ export function DoctorUnpaidTab() {
                     {index + 1}
                   </ReportPrintTd>
                   <ReportPrintTd>{report.doctorName}</ReportPrintTd>
-                  <ReportPrintTd muted>{formatDate(line.entryDate)}</ReportPrintTd>
+                  <ReportPrintTd className="print:hidden" muted>
+                    {formatDate(line.entryDate)}
+                  </ReportPrintTd>
                   <ReportPrintTd>{line.patientName}</ReportPrintTd>
                   <ReportPrintTd muted>{line.workSummary}</ReportPrintTd>
                   <ReportPrintTd align="right">{formatRon(line.amount)}</ReportPrintTd>

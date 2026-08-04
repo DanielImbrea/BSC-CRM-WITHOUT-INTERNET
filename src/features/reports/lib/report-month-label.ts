@@ -1,10 +1,9 @@
-import { endOfMonth, parse, startOfMonth } from "date-fns";
+import { format, parse } from "date-fns";
+import { ro } from "date-fns/locale";
 
-/** Transformă „2026-08” în „01.08.2026 – 31.08.2026”. */
+/** „2026-08” → „august 2026” (fără zile, ca să evite confuzii pe foile pentru doctori). */
 export function formatReportMonthLabel(month: string): string {
-  const start = startOfMonth(parse(month, "yyyy-MM", new Date()));
-  const end = endOfMonth(start);
-  const from = start.toLocaleDateString("ro-RO");
-  const to = end.toLocaleDateString("ro-RO");
-  return `${from} – ${to}`;
+  const date = parse(month, "yyyy-MM", new Date());
+  const label = format(date, "MMMM yyyy", { locale: ro });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }

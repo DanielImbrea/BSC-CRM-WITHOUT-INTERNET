@@ -2,7 +2,7 @@ import type { MonthReportRequest } from "@shared-types/ipc";
 import { getPrismaClient } from "../../../shared/db";
 import { doctorsRepository } from "../../doctors/infrastructure/doctors-repository";
 import { techniciansRepository } from "../../technicians/infrastructure/technicians-repository";
-import { buildWorkSummary, worksRepository } from "../../works/infrastructure/works-repository";
+import { buildWorkSummary, computeDoctorTotal, computeTechnicianTotal, worksRepository } from "../../works/infrastructure/works-repository";
 import { parseMonthRange } from "../../works/domain/work-validation";
 import { NotFoundError, ValidationError } from "../../../shared/errors";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
@@ -85,5 +85,46 @@ export async function getTechnicianSalaryReport(payload: MonthReportRequest) {
     month: payload.month,
     lines,
     totalAmount: lines.reduce((sum, line) => sum + line.amount, 0),
+  };
+}
+
+export async function getMonthSummaryReport(payload: { month: string }) {
+  requireAuthenticated();
+  if (!payload.month) {
+    throw new ValidationError("Selectează luna pentru rezumat.");
+  }
+
+  const { from, to } = parseMonthRange(payload.month);
+  const db = getPrismaClient();
+
+  const works = await db.work.findMany({
+    where: {
+      entryDate: { gte: from, lte: to },
+      paymentStatus: { in: ["PLATITA_DOCTOR", "PLATITA_TEHNICIAN"] },
+    },
+    include: { lines: true },
+  });
+
+  const doctorPaidTotal = works.reduce((sum, work) => sum + computeDoctorTotal(work.lines), 0);
+
+  const technicianPaidWorks = await db.work.findMany({
+    where: {
+      entryDate: { gte: from, lte: to },
+      paymentStatus: "PLATITA_TEHNICIAN",
+    },
+    include: { lines: true },
+  });
+
+  const technicianPaidTotal = technicianPaidWorks.reduce(
+    (sum, work) => sum + computeTechnicianTotal(work.lines),
+    0,
+  );
+
+  return {
+    month: payload.month,
+    doctorPaidTotal,
+    doctorPaidWorksCount: works.length,
+    technicianPaidTotal,
+    technicianPaidWorksCount: technicianPaidWorks.length,
   };
 }

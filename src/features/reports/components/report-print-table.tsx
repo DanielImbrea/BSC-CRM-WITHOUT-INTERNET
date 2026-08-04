@@ -43,10 +43,12 @@ export function ReportPrintTh({
   children,
   align = "left",
   narrow = false,
+  className,
 }: {
   children: React.ReactNode;
   align?: "left" | "right" | "center";
   narrow?: boolean;
+  className?: string;
 }) {
   return (
     <th
@@ -55,6 +57,7 @@ export function ReportPrintTh({
         align === "right" ? "text-right" : "",
         align === "center" ? "text-center" : "",
         narrow ? "report-print-col-index" : "",
+        className,
       ]
         .filter(Boolean)
         .join(" ")}
@@ -70,12 +73,14 @@ export function ReportPrintTd({
   muted = false,
   colSpan,
   narrow = false,
+  className,
 }: {
   children: React.ReactNode;
   align?: "left" | "right" | "center";
   muted?: boolean;
   colSpan?: number;
   narrow?: boolean;
+  className?: string;
 }) {
   return (
     <td
@@ -86,6 +91,7 @@ export function ReportPrintTd({
         align === "center" ? "text-center" : "",
         muted ? "text-muted-foreground" : "",
         narrow ? "report-print-col-index" : "",
+        className,
       ]
         .filter(Boolean)
         .join(" ")}

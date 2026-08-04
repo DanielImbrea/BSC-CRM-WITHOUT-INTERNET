@@ -333,6 +333,20 @@ export interface SaveReportPdfResponse {
   path: string | null;
 }
 
+export interface MonthSummaryRequest {
+  month: string;
+}
+
+export interface MonthSummaryReport {
+  month: string;
+  /** Lucrări cu status Plătită doctor sau Plătită tehnician (doctorul a plătit labul). */
+  doctorPaidTotal: number;
+  doctorPaidWorksCount: number;
+  /** Lucrări marcate Plătită tehnician (salariul a fost achitat). */
+  technicianPaidTotal: number;
+  technicianPaidWorksCount: number;
+}
+
 // ---------------------------------------------------------------------------
 // Dashboard
 // ---------------------------------------------------------------------------
@@ -418,6 +432,7 @@ export const IPC_CHANNELS = {
   WORKS_DELETE: "works:delete",
   REPORTS_DOCTOR_UNPAID: "reports:doctor-unpaid",
   REPORTS_TECHNICIAN_SALARY: "reports:technician-salary",
+  REPORTS_MONTH_SUMMARY: "reports:month-summary",
   EXPORT_SAVE_REPORT_PDF: "export:save-report-pdf",
   BACKUP_LIST: "backup:list",
   BACKUP_CREATE: "backup:create",
@@ -480,6 +495,7 @@ export interface LabManagerApi {
   reports: {
     getDoctorUnpaid: (payload: MonthReportRequest) => Promise<IpcResult<DoctorUnpaidReport>>;
     getTechnicianSalary: (payload: MonthReportRequest) => Promise<IpcResult<TechnicianSalaryReport>>;
+    getMonthSummary: (payload: MonthSummaryRequest) => Promise<IpcResult<MonthSummaryReport>>;
   };
   export: {
     saveReportPdf: (payload: SaveReportPdfRequest) => Promise<IpcResult<SaveReportPdfResponse>>;

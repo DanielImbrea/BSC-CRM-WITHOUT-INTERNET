@@ -56,6 +56,7 @@ const api: LabManagerApi = {
     getDoctorUnpaid: (payload) => ipcRenderer.invoke(IPC_CHANNELS.REPORTS_DOCTOR_UNPAID, payload),
     getTechnicianSalary: (payload) =>
       ipcRenderer.invoke(IPC_CHANNELS.REPORTS_TECHNICIAN_SALARY, payload),
+    getMonthSummary: (payload) => ipcRenderer.invoke(IPC_CHANNELS.REPORTS_MONTH_SUMMARY, payload),
   },
   export: {
     saveReportPdf: (payload) => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_SAVE_REPORT_PDF, payload),
