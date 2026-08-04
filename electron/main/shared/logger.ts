@@ -17,11 +17,21 @@ function getLogFilePath(): string {
   return path.join(logsDir, `${today}.log`);
 }
 
+function formatLogArg(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value instanceof Error) {
+    return value.stack ?? value.message;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function writeToFile(level: string, args: unknown[]): void {
   try {
-    const line = `[${new Date().toISOString()}] [${level}] ${args
-      .map((a) => (typeof a === "string" ? a : JSON.stringify(a)))
-      .join(" ")}\n`;
+    const line = `[${new Date().toISOString()}] [${level}] ${args.map(formatLogArg).join(" ")}\n`;
     fs.appendFileSync(getLogFilePath(), line);
   } catch {
     // Nu blocăm aplicația dacă scrierea în log eșuează (ex: disc plin).

@@ -131,3 +131,8 @@ export async function ensureDatabaseSchema(db: PrismaClient): Promise<PrismaClie
 
   return activeDb;
 }
+
+/** Compatibilitate — build-uri vechi (v0.2.10) încă importă acest nume. */
+export async function applySqlMigrationsFallback(db: PrismaClient): Promise<PrismaClient> {
+  return ensureDatabaseSchema(db);
+}
