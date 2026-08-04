@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { worksApi } from "../api/works-api";
-import type { SearchWorksFilters } from "@shared-types/ipc";
+import type { ListWorksRequest, SearchWorksFilters } from "@shared-types/ipc";
 
 export const worksQueryKeys = {
   all: ["works"] as const,
-  list: () => [...worksQueryKeys.all, "list"] as const,
+  list: (params: ListWorksRequest) => [...worksQueryKeys.all, "list", params] as const,
   search: (filters: SearchWorksFilters) => [...worksQueryKeys.all, "search", filters] as const,
   detail: (id: string) => [...worksQueryKeys.all, "detail", id] as const,
 };
 
-export function useWorks() {
+export function useWorksList(params: ListWorksRequest) {
   return useQuery({
-    queryKey: worksQueryKeys.list(),
-    queryFn: worksApi.list,
+    queryKey: worksQueryKeys.list(params),
+    queryFn: () => worksApi.list(params),
   });
 }
 

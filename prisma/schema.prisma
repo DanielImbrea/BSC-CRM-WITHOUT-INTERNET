@@ -40,11 +40,13 @@ model Technician {
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  worksAs1   Work[]   @relation("WorkTechnician1")
-  worksAs2   Work[]   @relation("WorkTechnician2")
-  worksAs3   Work[]   @relation("WorkTechnician3")
-  workLines  WorkLine[]
-  rates      TechnicianRate[]
+  worksAs1      Work[]     @relation("WorkTechnician1")
+  worksAs2      Work[]     @relation("WorkTechnician2")
+  worksAs3      Work[]     @relation("WorkTechnician3")
+  workLinesAs1  WorkLine[] @relation("WorkLineTechnician1")
+  workLinesAs2  WorkLine[] @relation("WorkLineTechnician2")
+  workLinesAs3  WorkLine[] @relation("WorkLineTechnician3")
+  rates         TechnicianRate[]
 
   @@index([name])
   @@index([active])
@@ -129,8 +131,12 @@ model WorkLine {
   workId              String
   workType            WorkType    @relation(fields: [workTypeId], references: [id], onDelete: Restrict)
   workTypeId          String
-  technician          Technician? @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+  technician          Technician? @relation("WorkLineTechnician1", fields: [technicianId], references: [id], onDelete: SetNull)
   technicianId        String?
+  technician2         Technician? @relation("WorkLineTechnician2", fields: [technician2Id], references: [id], onDelete: SetNull)
+  technician2Id       String?
+  technician3         Technician? @relation("WorkLineTechnician3", fields: [technician3Id], references: [id], onDelete: SetNull)
+  technician3Id       String?
   quantity            Int
   doctorUnitPrice     Int
   technicianUnitPrice Int
@@ -139,6 +145,8 @@ model WorkLine {
   @@index([workId])
   @@index([workTypeId])
   @@index([technicianId])
+  @@index([technician2Id])
+  @@index([technician3Id])
 }
 
 model Setting {

@@ -9,6 +9,10 @@ export interface WorkLineRecord {
   workTypeName: string;
   technicianId: string | null;
   technicianName: string | null;
+  technician2Id: string | null;
+  technician2Name: string | null;
+  technician3Id: string | null;
+  technician3Name: string | null;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
@@ -19,6 +23,7 @@ export interface WorkListRecord {
   entryDate: Date;
   patientName: string;
   doctorName: string;
+  observations: string | null;
   paymentStatus: PaymentStatus;
   doctorTotal: number;
   technicianTotal: number;
@@ -55,7 +60,7 @@ type WorkWithRelations = Prisma.WorkGetPayload<{
     technician1: true;
     technician2: true;
     technician3: true;
-    lines: { include: { workType: true; technician: true } };
+    lines: { include: { workType: true; technician: true; technician2: true; technician3: true } };
   };
 }>;
 
@@ -66,6 +71,10 @@ function mapLines(work: WorkWithRelations): WorkLineRecord[] {
     workTypeName: line.workType.name,
     technicianId: line.technicianId,
     technicianName: line.technician?.name ?? null,
+    technician2Id: line.technician2Id,
+    technician2Name: line.technician2?.name ?? null,
+    technician3Id: line.technician3Id,
+    technician3Name: line.technician3?.name ?? null,
     quantity: line.quantity,
     doctorUnitPrice: line.doctorUnitPrice,
     technicianUnitPrice: line.technicianUnitPrice,
@@ -76,9 +85,11 @@ function uniqueTechnicianNames(lines: WorkLineRecord[]): string[] {
   const seen = new Set<string>();
   const names: string[] = [];
   for (const line of lines) {
-    if (line.technicianName && !seen.has(line.technicianName)) {
-      seen.add(line.technicianName);
-      names.push(line.technicianName);
+    for (const name of [line.technicianName, line.technician2Name, line.technician3Name]) {
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
     }
   }
   return names;
@@ -98,21 +109,45 @@ export function buildWorkSummary(lines: Pick<WorkLineRecord, "quantity" | "workT
   return lines.map((line) => `${line.quantity}× ${line.workTypeName}`).join(", ");
 }
 
+function listTechnicianColumns(lines: WorkLineRecord[]): {
+  technician1Name: string | null;
+  technician2Name: string | null;
+  technician3Name: string | null;
+} {
+  const primary = lines[0];
+  if (!primary) {
+    return { technician1Name: null, technician2Name: null, technician3Name: null };
+  }
+  const fromLine = {
+    technician1Name: primary.technicianName,
+    technician2Name: primary.technician2Name,
+    technician3Name: primary.technician3Name,
+  };
+  if (fromLine.technician1Name || fromLine.technician2Name || fromLine.technician3Name) {
+    return fromLine;
+  }
+  const fallback = uniqueTechnicianNames(lines);
+  return {
+    technician1Name: fallback[0] ?? null,
+    technician2Name: fallback[1] ?? null,
+    technician3Name: fallback[2] ?? null,
+  };
+}
+
 function toListRecord(work: WorkWithRelations): WorkListRecord {
   const lines = mapLines(work);
-  const techNames = uniqueTechnicianNames(lines);
+  const techColumns = listTechnicianColumns(lines);
   return {
     id: work.id,
     entryDate: work.entryDate,
     patientName: work.patientName,
     doctorName: work.doctor.name,
+    observations: work.observations,
     paymentStatus: work.paymentStatus as PaymentStatus,
     doctorTotal: computeDoctorTotal(lines),
     technicianTotal: computeTechnicianTotal(lines),
     workSummary: buildWorkSummary(lines),
-    technician1Name: techNames[0] ?? work.technician1?.name ?? null,
-    technician2Name: techNames[1] ?? work.technician2?.name ?? null,
-    technician3Name: techNames[2] ?? work.technician3?.name ?? null,
+    ...techColumns,
   };
 }
 
@@ -146,32 +181,83 @@ const workInclude = {
   technician2: true,
   technician3: true,
   lines: {
-    include: { workType: true, technician: true },
+    include: { workType: true, technician: true, technician2: true, technician3: true },
     orderBy: { createdAt: "asc" as const },
   },
 };
 
 function buildWhere(filters: SearchWorksFilters): Prisma.WorkWhereInput {
-  const where: Prisma.WorkWhereInput = {};
-  if (filters.doctorId) where.doctorId = filters.doctorId;
+  const conditions: Prisma.WorkWhereInput[] = [];
+
+  if (filters.doctorId) conditions.push({ doctorId: filters.doctorId });
   if (filters.patientName?.trim()) {
-    where.patientName = { contains: filters.patientName.trim() };
+    conditions.push({ patientName: { contains: filters.patientName.trim() } });
   }
-  if (filters.technicianId) {
-    where.lines = { some: { technicianId: filters.technicianId } };
+  if (filters.paymentStatus) conditions.push({ paymentStatus: filters.paymentStatus });
+
+  const lineFilters: Prisma.WorkLineWhereInput[] = [];
+  if (filters.technicianId) lineFilters.push({ technicianId: filters.technicianId });
+  if (filters.technician2Id) lineFilters.push({ technician2Id: filters.technician2Id });
+  if (filters.technician3Id) lineFilters.push({ technician3Id: filters.technician3Id });
+  if (filters.workTypeId) lineFilters.push({ workTypeId: filters.workTypeId });
+  if (lineFilters.length === 1) {
+    conditions.push({ lines: { some: lineFilters[0] } });
+  } else if (lineFilters.length > 1) {
+    conditions.push({ lines: { some: { AND: lineFilters } } });
   }
-  if (filters.technician1Id) where.technician1Id = filters.technician1Id;
-  if (filters.technician2Id) where.technician2Id = filters.technician2Id;
-  if (filters.technician3Id) where.technician3Id = filters.technician3Id;
-  if (filters.paymentStatus) where.paymentStatus = filters.paymentStatus;
+
+  if (filters.keyword?.trim()) {
+    const q = filters.keyword.trim();
+    conditions.push({
+      OR: [
+        { patientName: { contains: q } },
+        { observations: { contains: q } },
+        { doctor: { name: { contains: q } } },
+        { lines: { some: { workType: { name: { contains: q } } } } },
+      ],
+    });
+  }
+
   const { from, to } = buildSearchDateRange(filters);
   if (from && to) {
-    where.entryDate = { gte: from, lte: to };
+    conditions.push({ entryDate: { gte: from, lte: to } });
   }
-  return where;
+
+  if (conditions.length === 0) return {};
+  if (conditions.length === 1) return conditions[0]!;
+  return { AND: conditions };
 }
 
+const SEARCH_MAX_RESULTS = 500;
+
 export const worksRepository = {
+  async findPage(
+    params: { page: number; pageSize: number; month?: string },
+    db: DbClient = getPrismaClient(),
+  ): Promise<{ items: WorkListRecord[]; total: number; page: number; pageSize: number }> {
+    const page = Math.max(1, params.page);
+    const pageSize = Math.min(200, Math.max(1, params.pageSize));
+    const where = buildWhere(params.month ? { month: params.month } : {});
+
+    const [total, rows] = await Promise.all([
+      db.work.count({ where }),
+      db.work.findMany({
+        where,
+        orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: workInclude,
+      }),
+    ]);
+
+    return {
+      items: rows.map(toListRecord),
+      total,
+      page,
+      pageSize,
+    };
+  },
+
   async findAll(db: DbClient = getPrismaClient()): Promise<WorkListRecord[]> {
     const rows = await db.work.findMany({
       orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
@@ -180,13 +266,24 @@ export const worksRepository = {
     return rows.map(toListRecord);
   },
 
-  async search(filters: SearchWorksFilters, db: DbClient = getPrismaClient()): Promise<WorkListRecord[]> {
+  async search(
+    filters: SearchWorksFilters,
+    options?: { unlimited?: boolean },
+    db: DbClient = getPrismaClient(),
+  ): Promise<{ items: WorkListRecord[]; total: number; truncated: boolean }> {
+    const where = buildWhere(filters);
+    const total = await db.work.count({ where });
     const rows = await db.work.findMany({
-      where: buildWhere(filters),
+      where,
       orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
+      ...(options?.unlimited ? {} : { take: SEARCH_MAX_RESULTS }),
       include: workInclude,
     });
-    return rows.map(toListRecord);
+    return {
+      items: rows.map(toListRecord),
+      total,
+      truncated: !options?.unlimited && total > rows.length,
+    };
   },
 
   async findById(id: string, db: DbClient = getPrismaClient()): Promise<WorkDetailRecord | null> {
@@ -207,6 +304,8 @@ export const worksRepository = {
       lines: {
         workTypeId: string;
         technicianId: string | null;
+        technician2Id: string | null;
+        technician3Id: string | null;
         quantity: number;
         doctorUnitPrice: number;
         technicianUnitPrice: number;
@@ -228,6 +327,8 @@ export const worksRepository = {
           create: data.lines.map((line) => ({
             workTypeId: line.workTypeId,
             technicianId: line.technicianId,
+            technician2Id: line.technician2Id,
+            technician3Id: line.technician3Id,
             quantity: line.quantity,
             doctorUnitPrice: line.doctorUnitPrice,
             technicianUnitPrice: line.technicianUnitPrice,
@@ -253,6 +354,8 @@ export const worksRepository = {
       lines: {
         workTypeId: string;
         technicianId: string | null;
+        technician2Id: string | null;
+        technician3Id: string | null;
         quantity: number;
         doctorUnitPrice: number;
         technicianUnitPrice: number;
@@ -276,6 +379,8 @@ export const worksRepository = {
           create: data.lines.map((line) => ({
             workTypeId: line.workTypeId,
             technicianId: line.technicianId,
+            technician2Id: line.technician2Id,
+            technician3Id: line.technician3Id,
             quantity: line.quantity,
             doctorUnitPrice: line.doctorUnitPrice,
             technicianUnitPrice: line.technicianUnitPrice,

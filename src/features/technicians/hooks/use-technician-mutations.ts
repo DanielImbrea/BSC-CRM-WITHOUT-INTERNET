@@ -8,7 +8,7 @@ export function useCreateTechnician() {
   return useMutation({
     mutationFn: (payload: CreateTechnicianRequest) => techniciansApi.create(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: techniciansQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: techniciansQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });
@@ -19,7 +19,7 @@ export function useUpdateTechnician() {
   return useMutation({
     mutationFn: (payload: UpdateTechnicianRequest) => techniciansApi.update(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: techniciansQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: techniciansQueryKeys.all });
     },
   });
 }
@@ -29,7 +29,7 @@ export function useDeleteTechnician() {
   return useMutation({
     mutationFn: (id: string) => techniciansApi.delete(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: techniciansQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: techniciansQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });

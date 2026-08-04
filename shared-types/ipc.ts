@@ -54,6 +54,22 @@ export interface DoctorListItem {
   worksCount: number;
 }
 
+export interface ListDoctorsRequest {
+  page?: number;
+  pageSize?: number;
+  /** Filtru după nume, telefon sau email (contains) */
+  search?: string;
+  /** Pentru dropdown-uri — întreaga listă, fără paginare */
+  all?: boolean;
+}
+
+export interface ListDoctorsResponse {
+  items: DoctorListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface CreateDoctorRequest {
   name: string;
   phone?: string;
@@ -82,6 +98,22 @@ export interface TechnicianDto {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ListTechniciansRequest {
+  page?: number;
+  pageSize?: number;
+  /** Filtru după nume (contains) */
+  search?: string;
+  /** Pentru dropdown-uri — întreaga listă, fără paginare */
+  all?: boolean;
+}
+
+export interface ListTechniciansResponse {
+  items: TechnicianDto[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface CreateTechnicianRequest {
@@ -163,6 +195,22 @@ export interface WorkTypeDto {
   updatedAt: string;
 }
 
+export interface ListWorkTypesRequest {
+  page?: number;
+  pageSize?: number;
+  /** Filtru după nume (contains) */
+  search?: string;
+  /** Pentru dropdown-uri — întreg catalogul, fără paginare */
+  all?: boolean;
+}
+
+export interface ListWorkTypesResponse {
+  items: WorkTypeDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface CreateWorkTypeRequest {
   name: string;
 }
@@ -187,6 +235,10 @@ export interface WorkLineDto {
   workTypeName: string;
   technicianId: string | null;
   technicianName: string | null;
+  technician2Id: string | null;
+  technician2Name: string | null;
+  technician3Id: string | null;
+  technician3Name: string | null;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
@@ -199,6 +251,7 @@ export interface WorkListItem {
   entryDate: string;
   patientName: string;
   doctorName: string;
+  observations: string | null;
   paymentStatus: PaymentStatus;
   doctorTotal: number;
   technicianTotal: number;
@@ -232,6 +285,8 @@ export interface WorkDto {
 export interface CreateWorkLineInput {
   workTypeId: string;
   technicianId?: string;
+  technician2Id?: string;
+  technician3Id?: string;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
@@ -271,14 +326,40 @@ export interface DeleteWorkRequest {
   id: string;
 }
 
+export interface ListWorksRequest {
+  page?: number;
+  pageSize?: number;
+  /** YYYY-MM — omit pentru toate perioadele (cu paginare) */
+  month?: string;
+}
+
+export interface ListWorksResponse {
+  items: WorkListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SearchWorksResponse {
+  items: WorkListItem[];
+  total: number;
+  truncated: boolean;
+}
+
 export interface SearchWorksFilters {
   doctorId?: string;
   patientName?: string;
+  /** Tehnician 1 pe linie (WorkLine.technicianId) */
   technicianId?: string;
-  technician1Id?: string;
+  /** Tehnician 2 pe linie (WorkLine.technician2Id) */
   technician2Id?: string;
+  /** Tehnician 3 pe linie (WorkLine.technician3Id) */
   technician3Id?: string;
+  workTypeId?: string;
+  /** Caută în pacient, observații, doctor, tip lucrare */
+  keyword?: string;
   paymentStatus?: PaymentStatus;
+  /** YYYY-MM — omit pentru toate perioadele */
   month?: string;
 }
 
@@ -458,7 +539,7 @@ export interface LabManagerApi {
     getSummary: () => Promise<IpcResult<DashboardSummary>>;
   };
   doctors: {
-    list: () => Promise<IpcResult<DoctorListItem[]>>;
+    list: (payload?: ListDoctorsRequest) => Promise<IpcResult<ListDoctorsResponse>>;
     get: (payload: { id: string }) => Promise<IpcResult<DoctorDto>>;
     create: (payload: CreateDoctorRequest) => Promise<IpcResult<DoctorDto>>;
     update: (payload: UpdateDoctorRequest) => Promise<IpcResult<DoctorDto>>;
@@ -467,7 +548,7 @@ export interface LabManagerApi {
     saveRates: (payload: SaveDoctorRatesRequest) => Promise<IpcResult<void>>;
   };
   technicians: {
-    list: () => Promise<IpcResult<TechnicianDto[]>>;
+    list: (payload?: ListTechniciansRequest) => Promise<IpcResult<ListTechniciansResponse>>;
     create: (payload: CreateTechnicianRequest) => Promise<IpcResult<TechnicianDto>>;
     update: (payload: UpdateTechnicianRequest) => Promise<IpcResult<TechnicianDto>>;
     delete: (payload: DeleteTechnicianRequest) => Promise<IpcResult<void>>;
@@ -478,14 +559,14 @@ export interface LabManagerApi {
     lookupLinePrices: (payload: LookupLinePricesRequest) => Promise<IpcResult<LookupLinePricesResponse>>;
   };
   workTypes: {
-    list: () => Promise<IpcResult<WorkTypeDto[]>>;
+    list: (payload?: ListWorkTypesRequest) => Promise<IpcResult<ListWorkTypesResponse>>;
     create: (payload: CreateWorkTypeRequest) => Promise<IpcResult<WorkTypeDto>>;
     update: (payload: UpdateWorkTypeRequest) => Promise<IpcResult<WorkTypeDto>>;
     delete: (payload: DeleteWorkTypeRequest) => Promise<IpcResult<void>>;
   };
   works: {
-    list: () => Promise<IpcResult<WorkListItem[]>>;
-    search: (payload: SearchWorksFilters) => Promise<IpcResult<WorkListItem[]>>;
+    list: (payload?: ListWorksRequest) => Promise<IpcResult<ListWorksResponse>>;
+    search: (payload: SearchWorksFilters) => Promise<IpcResult<SearchWorksResponse>>;
     get: (payload: { id: string }) => Promise<IpcResult<WorkDto>>;
     create: (payload: CreateWorkRequest) => Promise<IpcResult<WorkDto>>;
     update: (payload: UpdateWorkRequest) => Promise<IpcResult<WorkDto>>;

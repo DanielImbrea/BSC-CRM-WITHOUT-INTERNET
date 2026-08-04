@@ -1,6 +1,8 @@
 import { IPC_CHANNELS } from "@shared-types/ipc";
 import type {
   WorkTypeDto,
+  ListWorkTypesRequest,
+  ListWorkTypesResponse,
   CreateWorkTypeRequest,
   UpdateWorkTypeRequest,
   DeleteWorkTypeRequest,
@@ -19,10 +21,18 @@ function toDto(record: WorkTypeRecord): WorkTypeDto {
 }
 
 export function registerWorkTypesHandlers(): void {
-  registerIpcHandler<void, WorkTypeDto[]>(IPC_CHANNELS.WORK_TYPES_LIST, async () => {
-    const rows = await workTypeUseCases.listWorkTypes();
-    return rows.map(toDto);
-  });
+  registerIpcHandler<ListWorkTypesRequest | void, ListWorkTypesResponse>(
+    IPC_CHANNELS.WORK_TYPES_LIST,
+    async (payload) => {
+      const result = await workTypeUseCases.listWorkTypes(payload ?? {});
+      return {
+        items: result.items.map(toDto),
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+  );
 
   registerIpcHandler<CreateWorkTypeRequest, WorkTypeDto>(
     IPC_CHANNELS.WORK_TYPES_CREATE,

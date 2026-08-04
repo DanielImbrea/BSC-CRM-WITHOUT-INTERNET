@@ -16,7 +16,7 @@ const api: LabManagerApi = {
     getSummary: () => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_GET_SUMMARY),
   },
   doctors: {
-    list: () => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_LIST),
+    list: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_LIST, payload),
     get: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_GET, payload),
     create: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_CREATE, payload),
     update: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_UPDATE, payload),
@@ -25,7 +25,7 @@ const api: LabManagerApi = {
     saveRates: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_SAVE_RATES, payload),
   },
   technicians: {
-    list: () => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_LIST),
+    list: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_LIST, payload),
     create: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_CREATE, payload),
     update: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_UPDATE, payload),
     delete: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_DELETE, payload),
@@ -37,13 +37,13 @@ const api: LabManagerApi = {
       ipcRenderer.invoke(IPC_CHANNELS.RATES_LOOKUP_LINE_PRICES, payload),
   },
   workTypes: {
-    list: () => ipcRenderer.invoke(IPC_CHANNELS.WORK_TYPES_LIST),
+    list: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORK_TYPES_LIST, payload),
     create: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORK_TYPES_CREATE, payload),
     update: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORK_TYPES_UPDATE, payload),
     delete: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORK_TYPES_DELETE, payload),
   },
   works: {
-    list: () => ipcRenderer.invoke(IPC_CHANNELS.WORKS_LIST),
+    list: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORKS_LIST, payload),
     search: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORKS_SEARCH, payload),
     get: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORKS_GET, payload),
     create: (payload) => ipcRenderer.invoke(IPC_CHANNELS.WORKS_CREATE, payload),

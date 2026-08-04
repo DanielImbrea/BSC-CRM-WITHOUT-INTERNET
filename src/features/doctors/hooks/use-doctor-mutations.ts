@@ -8,7 +8,7 @@ export function useCreateDoctor() {
   return useMutation({
     mutationFn: (payload: CreateDoctorRequest) => doctorsApi.create(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });
@@ -19,7 +19,7 @@ export function useUpdateDoctor() {
   return useMutation({
     mutationFn: (payload: UpdateDoctorRequest) => doctorsApi.update(payload),
     onSuccess: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.detail(updated.id) });
     },
   });
@@ -30,7 +30,7 @@ export function useDeleteDoctor() {
   return useMutation({
     mutationFn: (id: string) => doctorsApi.delete(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: doctorsQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });

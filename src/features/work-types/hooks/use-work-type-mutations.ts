@@ -8,7 +8,7 @@ export function useCreateWorkType() {
   return useMutation({
     mutationFn: (payload: CreateWorkTypeRequest) => workTypesApi.create(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: workTypesQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: workTypesQueryKeys.all });
     },
   });
 }
@@ -18,7 +18,7 @@ export function useUpdateWorkType() {
   return useMutation({
     mutationFn: (payload: UpdateWorkTypeRequest) => workTypesApi.update(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: workTypesQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: workTypesQueryKeys.all });
     },
   });
 }
@@ -28,7 +28,7 @@ export function useDeleteWorkType() {
   return useMutation({
     mutationFn: (id: string) => workTypesApi.delete(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: workTypesQueryKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: workTypesQueryKeys.all });
     },
   });
 }

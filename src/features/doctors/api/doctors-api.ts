@@ -1,14 +1,15 @@
 import type {
   CreateDoctorRequest,
   DoctorDto,
-  DoctorListItem,
+  ListDoctorsRequest,
+  ListDoctorsResponse,
   UpdateDoctorRequest,
 } from "@shared-types/ipc";
 import { unwrapIpc } from "@/shared/lib/ipc";
 
 export const doctorsApi = {
-  async list(): Promise<DoctorListItem[]> {
-    return unwrapIpc(await window.labManager.doctors.list());
+  async list(params: ListDoctorsRequest = {}): Promise<ListDoctorsResponse> {
+    return unwrapIpc(await window.labManager.doctors.list(params));
   },
   async get(id: string): Promise<DoctorDto> {
     return unwrapIpc(await window.labManager.doctors.get({ id }));

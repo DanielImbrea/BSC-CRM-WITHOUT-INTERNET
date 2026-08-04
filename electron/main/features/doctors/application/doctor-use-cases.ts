@@ -1,12 +1,26 @@
+import type { ListDoctorsRequest } from "@shared-types/ipc";
 import { Prisma } from "../../../shared/prisma";
 import { doctorsRepository, type DoctorRecord } from "../infrastructure/doctors-repository";
 import { assertDoctorIsValid, type DoctorInput } from "../domain/doctor-validation";
 import { NotFoundError, ConflictError } from "../../../shared/errors";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
 
-export async function listDoctors(): Promise<DoctorRecord[]> {
+export async function listDoctors(params: ListDoctorsRequest = {}): Promise<{
+  items: DoctorRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   requireAuthenticated();
-  return doctorsRepository.findAll();
+  if (params.all) {
+    const items = await doctorsRepository.findAll();
+    return { items, total: items.length, page: 1, pageSize: items.length };
+  }
+  return doctorsRepository.findPage({
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 50,
+    search: params.search,
+  });
 }
 
 export async function getDoctor(id: string): Promise<DoctorRecord> {

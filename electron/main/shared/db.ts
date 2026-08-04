@@ -91,7 +91,7 @@ export function getPrismaClient(): PrismaClientInstance {
     configurePrismaEnginePaths();
     process.env.DATABASE_URL = resolveDatabaseUrl();
     prismaInstance = new PrismaClient({
-      log: app.isPackaged ? ["error", "warn"] : ["error", "warn", "query"],
+      log: ["error", "warn"],
     });
   }
   return prismaInstance;

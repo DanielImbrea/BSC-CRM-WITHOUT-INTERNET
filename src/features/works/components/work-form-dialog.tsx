@@ -14,29 +14,29 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { DatePicker } from "@/shared/components/ui/date-picker";
+import { SearchableEntitySelect } from "@/shared/components/searchable-entity-select";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+  loadActiveTechnicianOptions,
+  loadDoctorOptions,
+  loadWorkTypeOptions,
+} from "@/shared/lib/catalog-options";
 import { parseRonInput } from "@/shared/lib/format";
-import { useDoctors } from "@/features/doctors/hooks/use-doctors";
-import { useTechnicians } from "@/features/technicians/hooks/use-technicians";
-import { useWorkTypes } from "@/features/work-types/hooks/use-work-types";
 import { ratesApi } from "@/features/rates/api/rates-api";
 import { useWork } from "../hooks/use-works";
 import { useCreateWork, useUpdateWork } from "../hooks/use-work-mutations";
 import { PaymentStatusSelect } from "./payment-status-select";
 import type { PaymentStatus } from "@shared-types/ipc";
 
-const NONE = "__none__";
-
 interface WorkLineForm {
   key: string;
   workTypeId: string;
+  workTypeName?: string;
   technicianId: string;
+  technicianName?: string;
+  technician2Id: string;
+  technician2Name?: string;
+  technician3Id: string;
+  technician3Name?: string;
   quantity: string;
   doctorUnitPrice: string;
   technicianUnitPrice: string;
@@ -57,6 +57,8 @@ function emptyLine(): WorkLineForm {
     key: crypto.randomUUID(),
     workTypeId: "",
     technicianId: "",
+    technician2Id: "",
+    technician3Id: "",
     quantity: "1",
     doctorUnitPrice: "",
     technicianUnitPrice: "",
@@ -66,14 +68,12 @@ function emptyLine(): WorkLineForm {
 export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDialogProps) {
   const isEditMode = workId !== null;
   const { data: existingWork } = useWork(isEditMode ? workId : null);
-  const { data: doctors = [] } = useDoctors();
-  const { data: technicians = [] } = useTechnicians();
-  const { data: workTypes = [] } = useWorkTypes();
   const createWork = useCreateWork();
   const updateWork = useUpdateWork();
 
   const [entryDate, setEntryDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [doctorId, setDoctorId] = React.useState("");
+  const [doctorName, setDoctorName] = React.useState<string | null>(null);
   const [patientName, setPatientName] = React.useState("");
   const [observations, setObservations] = React.useState("");
   const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus>("NEPLATITA");
@@ -84,6 +84,7 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
     if (open && isEditMode && existingWork) {
       setEntryDate(existingWork.entryDate.slice(0, 10));
       setDoctorId(existingWork.doctorId);
+      setDoctorName(existingWork.doctorName);
       setPatientName(existingWork.patientName);
       setObservations(existingWork.observations ?? "");
       setPaymentStatus(existingWork.paymentStatus);
@@ -92,7 +93,13 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
           ? existingWork.lines.map((line) => ({
               key: line.id,
               workTypeId: line.workTypeId,
+              workTypeName: line.workTypeName,
               technicianId: line.technicianId ?? "",
+              technicianName: line.technicianName ?? undefined,
+              technician2Id: line.technician2Id ?? "",
+              technician2Name: line.technician2Name ?? undefined,
+              technician3Id: line.technician3Id ?? "",
+              technician3Name: line.technician3Name ?? undefined,
               quantity: String(line.quantity),
               doctorUnitPrice: baniToInput(line.doctorUnitPrice),
               technicianUnitPrice: baniToInput(line.technicianUnitPrice),
@@ -102,6 +109,7 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
     } else if (open && !isEditMode) {
       setEntryDate(format(new Date(), "yyyy-MM-dd"));
       setDoctorId("");
+      setDoctorName(null);
       setPatientName("");
       setObservations("");
       setPaymentStatus("NEPLATITA");
@@ -145,17 +153,12 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
     void lookupAndApplyLinePrices(index, doctorId, workTypeId, line?.technicianId ?? "");
   }
 
-  function handleTechnicianChange(index: number, technicianId: string) {
-    updateLine(index, { technicianId });
-    const line = lines[index];
-    if (line?.workTypeId) {
-      void lookupAndApplyLinePrices(index, doctorId, line.workTypeId, technicianId);
-    }
-  }
-
   async function handleDoctorChange(nextDoctorId: string) {
     setDoctorId(nextDoctorId);
-    if (!nextDoctorId) return;
+    if (!nextDoctorId) {
+      setDoctorName(null);
+      return;
+    }
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (line.workTypeId) {
@@ -170,6 +173,25 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
 
   function removeLine(index: number) {
     setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+
+  async function resolveTechnicianUnitPrice(line: WorkLineForm): Promise<number> {
+    if (line.technicianUnitPrice.trim()) {
+      return parseRonInput(line.technicianUnitPrice);
+    }
+    if (!doctorId || !line.workTypeId || !line.technicianId) {
+      return 0;
+    }
+    try {
+      const prices = await ratesApi.lookupLinePrices({
+        doctorId,
+        workTypeId: line.workTypeId,
+        technicianId: line.technicianId,
+      });
+      return prices.technicianUnitPrice;
+    } catch {
+      return 0;
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -196,13 +218,17 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
       observations: observations.trim() || undefined,
       paymentStatus,
       doctorId,
-      lines: validLines.map((line) => ({
-        workTypeId: line.workTypeId,
-        technicianId: line.technicianId || undefined,
-        quantity: Math.max(1, parseInt(line.quantity, 10) || 1),
-        doctorUnitPrice: parseRonInput(line.doctorUnitPrice),
-        technicianUnitPrice: parseRonInput(line.technicianUnitPrice),
-      })),
+      lines: await Promise.all(
+        validLines.map(async (line) => ({
+          workTypeId: line.workTypeId,
+          technicianId: line.technicianId || undefined,
+          technician2Id: line.technician2Id || undefined,
+          technician3Id: line.technician3Id || undefined,
+          quantity: Math.max(1, parseInt(line.quantity, 10) || 1),
+          doctorUnitPrice: parseRonInput(line.doctorUnitPrice),
+          technicianUnitPrice: await resolveTechnicianUnitPrice(line),
+        })),
+      ),
     };
 
     try {
@@ -218,16 +244,52 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
   }
 
   const isSubmitting = createWork.isPending || updateWork.isPending;
-  const activeTechnicians = technicians.filter((t) => t.active);
+
+  function renderTechnicianSelect(
+    index: number,
+    field: "technicianId" | "technician2Id" | "technician3Id",
+    nameField: "technicianName" | "technician2Name" | "technician3Name",
+    label: string,
+    onPrimaryChange?: (technicianId: string) => void,
+  ) {
+    const line = lines[index];
+    if (!line) return null;
+
+    return (
+      <div className="flex flex-col gap-1">
+        {index === 0 && <span className="text-xs text-muted-foreground">{label}</span>}
+        <SearchableEntitySelect
+          value={line[field]}
+          valueLabel={line[nameField]}
+          onChange={(next) => {
+            updateLine(index, { [field]: next });
+            if (field === "technicianId" && onPrimaryChange) {
+              onPrimaryChange(next);
+            }
+          }}
+          onSelectOption={(option) => {
+            updateLine(index, { [nameField]: option?.label });
+          }}
+          queryKey="technicians-form"
+          loadOptions={loadActiveTechnicianOptions}
+          clearLabel="—"
+          emptyLabel="—"
+          searchPlaceholder="Caută tehnician..."
+        />
+      </div>
+    );
+  }
+
+  if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Editează lucrare" : "Lucrare nouă"}</DialogTitle>
           <DialogDescription>
-            Fiecare linie poate avea propriul tehnician (metal, ceramică, etc.). Prețurile se
-            completează din grilele configurate la Doctori / Tehnicieni.
+            Pe fiecare linie poți selecta până la 3 tehnicieni. Prețul doctor se completează din
+            grilă și poate fi modificat manual; prețul tehnician se ia automat din grile.
           </DialogDescription>
         </DialogHeader>
 
@@ -246,18 +308,16 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label>Doctor / cabinet *</Label>
-              <Select value={doctorId} onValueChange={(v) => void handleDoctorChange(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selectează doctor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {doctors.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableEntitySelect
+                value={doctorId}
+                valueLabel={doctorName}
+                onChange={(next) => void handleDoctorChange(next)}
+                onSelectOption={(option) => setDoctorName(option?.label ?? null)}
+                queryKey="doctors-form"
+                loadOptions={loadDoctorOptions}
+                emptyLabel="Selectează doctor"
+                searchPlaceholder="Caută doctor..."
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="patientName">Pacient *</Label>
@@ -292,45 +352,31 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
               {lines.map((line, index) => (
                 <div
                   key={line.key}
-                  className="grid grid-cols-[1fr_1fr_64px_88px_88px_36px] items-end gap-2 rounded-md border border-border bg-card/50 p-3"
+                  className="grid grid-cols-[minmax(120px,1.2fr)_minmax(88px,1fr)_minmax(88px,1fr)_minmax(88px,1fr)_52px_76px_36px] items-end gap-2 rounded-md border border-border bg-card/50 p-3"
                 >
                   <div className="flex flex-col gap-1">
                     {index === 0 && <span className="text-xs text-muted-foreground">Tip lucrare</span>}
-                    <Select
-                      value={line.workTypeId || undefined}
-                      onValueChange={(v) => handleWorkTypeChange(index, v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selectează" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {workTypes.map((wt) => (
-                          <SelectItem key={wt.id} value={wt.id}>
-                            {wt.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableEntitySelect
+                      value={line.workTypeId}
+                      valueLabel={line.workTypeName}
+                      onChange={(workTypeId) => handleWorkTypeChange(index, workTypeId)}
+                      onSelectOption={(option) => {
+                        updateLine(index, { workTypeName: option?.label });
+                      }}
+                      queryKey="work-types-form"
+                      loadOptions={loadWorkTypeOptions}
+                      emptyLabel="Selectează"
+                      searchPlaceholder="Caută tip..."
+                    />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {index === 0 && <span className="text-xs text-muted-foreground">Tehnician</span>}
-                    <Select
-                      value={line.technicianId || NONE}
-                      onValueChange={(v) => handleTechnicianChange(index, v === NONE ? "" : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selectează" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>—</SelectItem>
-                        {activeTechnicians.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {renderTechnicianSelect(index, "technicianId", "technicianName", "Tehnician 1", (technicianId) => {
+                    const current = lines[index];
+                    if (current?.workTypeId) {
+                      void lookupAndApplyLinePrices(index, doctorId, current.workTypeId, technicianId);
+                    }
+                  })}
+                  {renderTechnicianSelect(index, "technician2Id", "technician2Name", "Tehnician 2")}
+                  {renderTechnicianSelect(index, "technician3Id", "technician3Name", "Tehnician 3")}
                   <div className="flex flex-col gap-1">
                     {index === 0 && <span className="text-xs text-muted-foreground">Cant.</span>}
                     <Input
@@ -346,16 +392,6 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
                       placeholder="0.00"
                       value={line.doctorUnitPrice}
                       onChange={(e) => updateLine(index, { doctorUnitPrice: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {index === 0 && (
-                      <span className="text-xs text-muted-foreground">Preț tehnician</span>
-                    )}
-                    <Input
-                      placeholder="0.00"
-                      value={line.technicianUnitPrice}
-                      onChange={(e) => updateLine(index, { technicianUnitPrice: e.target.value })}
                     />
                   </div>
                   <Button

@@ -1,59 +1,111 @@
 import * as React from "react";
 import { Search } from "lucide-react";
-import { format } from "date-fns";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { MonthPicker } from "@/shared/components/ui/date-picker";
+import { FilterEntitySelect } from "@/shared/components/filter-entity-select";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import { useDoctors } from "@/features/doctors/hooks/use-doctors";
-import { useTechnicians } from "@/features/technicians/hooks/use-technicians";
+  loadActiveTechnicianOptions,
+  loadDoctorOptions,
+  loadWorkTypeOptions,
+} from "@/shared/lib/catalog-options";
 import { useSearchWorks, useUpdateWorkPaymentStatus } from "@/features/works/hooks/use-work-mutations";
 import { WorksTable } from "@/features/works/components/works-table";
+import { WorkFormDialog } from "@/features/works/components/work-form-dialog";
+import { DeleteWorkDialog } from "@/features/works/components/delete-work-dialog";
 import { PaymentStatusSelect } from "@/features/works/components/payment-status-select";
 import type { PaymentStatus, SearchWorksFilters, WorkListItem } from "@shared-types/ipc";
 
-const NONE = "__none__";
+function buildFilters(state: {
+  doctorId: string;
+  patientName: string;
+  keyword: string;
+  technicianId: string;
+  technician2Id: string;
+  workTypeId: string;
+  paymentStatus: PaymentStatus | "";
+  month: string;
+}): SearchWorksFilters {
+  const filters: SearchWorksFilters = {};
+  if (state.doctorId) filters.doctorId = state.doctorId;
+  if (state.patientName.trim()) filters.patientName = state.patientName.trim();
+  if (state.keyword.trim()) filters.keyword = state.keyword.trim();
+  if (state.technicianId) filters.technicianId = state.technicianId;
+  if (state.technician2Id) filters.technician2Id = state.technician2Id;
+  if (state.workTypeId) filters.workTypeId = state.workTypeId;
+  if (state.paymentStatus) filters.paymentStatus = state.paymentStatus;
+  if (state.month) filters.month = state.month;
+  return filters;
+}
+
+const loadDoctors = loadDoctorOptions;
+const loadTechnicians = loadActiveTechnicianOptions;
+const loadWorkTypes = loadWorkTypeOptions;
 
 export function WorkSearchPage() {
-  const { data: doctors = [] } = useDoctors();
-  const { data: technicians = [] } = useTechnicians();
   const searchWorks = useSearchWorks();
   const updatePaymentStatus = useUpdateWorkPaymentStatus();
 
   const [doctorId, setDoctorId] = React.useState("");
   const [patientName, setPatientName] = React.useState("");
+  const [keyword, setKeyword] = React.useState("");
   const [technicianId, setTechnicianId] = React.useState("");
+  const [technician2Id, setTechnician2Id] = React.useState("");
+  const [workTypeId, setWorkTypeId] = React.useState("");
   const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus | "">("");
-  const [month, setMonth] = React.useState(format(new Date(), "yyyy-MM"));
+  const [month, setMonth] = React.useState("");
   const [results, setResults] = React.useState<WorkListItem[] | null>(null);
+  const [resultsTotal, setResultsTotal] = React.useState<number | null>(null);
+  const [resultsTruncated, setResultsTruncated] = React.useState(false);
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editingWorkId, setEditingWorkId] = React.useState<string | null>(null);
+  const [deletingWork, setDeletingWork] = React.useState<WorkListItem | null>(null);
 
-  const activeTechnicians = technicians.filter((t) => t.active);
+  const filterState = {
+    doctorId,
+    patientName,
+    keyword,
+    technicianId,
+    technician2Id,
+    workTypeId,
+    paymentStatus,
+    month,
+  };
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    const filters: SearchWorksFilters = {};
-    if (doctorId) filters.doctorId = doctorId;
-    if (patientName.trim()) filters.patientName = patientName.trim();
-    if (technicianId) filters.technicianId = technicianId;
-    if (paymentStatus) filters.paymentStatus = paymentStatus;
-    if (month) filters.month = month;
+    const data = await searchWorks.mutateAsync(buildFilters(filterState));
+    setResults(data.items);
+    setResultsTotal(data.total);
+    setResultsTruncated(data.truncated);
+  }
 
-    const data = await searchWorks.mutateAsync(filters);
-    setResults(data);
+  function openEditForm(work: WorkListItem) {
+    setEditingWorkId(work.id);
+    setFormOpen(true);
+  }
+
+  function handleWorkSaved() {
+    if (results === null) return;
+    void searchWorks
+      .mutateAsync(buildFilters(filterState))
+      .then((data) => {
+        setResults(data.items);
+        setResultsTotal(data.total);
+        setResultsTruncated(data.truncated);
+      })
+      .catch(() => undefined);
   }
 
   return (
     <div className="flex flex-col gap-6 p-8">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Căutare lucrări</h1>
-        <p className="text-sm text-muted-foreground">Filtrează lucrările după criterii multiple.</p>
+        <p className="text-sm text-muted-foreground">
+          Filtrează după orice criteriu. Perioada e opțională — lasă „Toate perioadele” pentru tot
+          istoricul.
+        </p>
       </div>
 
       <form
@@ -61,22 +113,16 @@ export function WorkSearchPage() {
         className="rounded-lg border border-border bg-card p-5"
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <Label>Doctor</Label>
-            <Select value={doctorId || NONE} onValueChange={(v) => setDoctorId(v === NONE ? "" : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Toți" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>Toți</SelectItem>
-                {doctors.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterEntitySelect
+            label="Doctor"
+            value={doctorId}
+            onChange={setDoctorId}
+            queryKey="doctors"
+            loadOptions={loadDoctors}
+            placeholder="Toți"
+            allLabel="Toți"
+            searchPlaceholder="Caută doctor..."
+          />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="patientName">Pacient</Label>
@@ -89,12 +135,33 @@ export function WorkSearchPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Luna</Label>
-            <MonthPicker value={month} onChange={setMonth} />
+            <Label htmlFor="keyword">Cuvânt cheie</Label>
+            <Input
+              id="keyword"
+              placeholder="Pacient, observații, tip lucrare..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+          </div>
+
+          <FilterEntitySelect
+            label="Tip lucrare"
+            value={workTypeId}
+            onChange={setWorkTypeId}
+            queryKey="work-types"
+            loadOptions={loadWorkTypes}
+            placeholder="Toate"
+            allLabel="Toate"
+            searchPlaceholder="Caută tip lucrare..."
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Perioadă (opțional)</Label>
+            <MonthPicker allowAll value={month} onChange={setMonth} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Status plată</Label>
+            <Label>Status</Label>
             <PaymentStatusSelect
               value={paymentStatus}
               onChange={setPaymentStatus}
@@ -103,22 +170,23 @@ export function WorkSearchPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>Tehnician (pe linie)</Label>
-            <Select value={technicianId || NONE} onValueChange={(v) => setTechnicianId(v === NONE ? "" : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Oricare" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>Oricare</SelectItem>
-                {activeTechnicians.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterEntitySelect
+            label="Tehnician 1"
+            value={technicianId}
+            onChange={setTechnicianId}
+            queryKey="technicians"
+            loadOptions={loadTechnicians}
+            searchPlaceholder="Caută tehnician..."
+          />
+
+          <FilterEntitySelect
+            label="Tehnician 2"
+            value={technician2Id}
+            onChange={setTechnician2Id}
+            queryKey="technicians"
+            loadOptions={loadTechnicians}
+            searchPlaceholder="Caută tehnician..."
+          />
         </div>
 
         <div className="mt-4 flex justify-end">
@@ -137,12 +205,18 @@ export function WorkSearchPage() {
 
       {results !== null && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">
-            {results.length} {results.length === 1 ? "rezultat" : "rezultate"}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">
+              {resultsTotal !== null
+                ? `${resultsTotal.toLocaleString("ro-RO")} ${resultsTotal === 1 ? "rezultat" : "rezultate"}`
+                : `${results.length} rezultate`}
+              {resultsTruncated && " — afișate primele 500, rafinează filtrele"}
+            </p>
+          </div>
           <WorksTable
             works={results}
-            showActions={false}
+            onEdit={openEditForm}
+            onDelete={setDeletingWork}
             onPaymentStatusChange={(work, status) => {
               void updatePaymentStatus.mutateAsync({ id: work.id, paymentStatus: status }).then(() => {
                 setResults((current) =>
@@ -150,9 +224,41 @@ export function WorkSearchPage() {
                 );
               });
             }}
+            emptyTitle="Niciun rezultat"
+            emptyDescription="Încearcă alte filtre sau un cuvânt cheie diferit."
           />
         </div>
       )}
+
+      {formOpen && (
+        <WorkFormDialog
+          open={formOpen}
+          onOpenChange={(open) => {
+            setFormOpen(open);
+            if (!open) {
+              setEditingWorkId(null);
+              handleWorkSaved();
+            }
+          }}
+          workId={editingWorkId}
+        />
+      )}
+
+      <DeleteWorkDialog
+        work={deletingWork}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletingWork(null);
+            if (results !== null) {
+              void searchWorks.mutateAsync(buildFilters(filterState)).then((data) => {
+                setResults(data.items);
+                setResultsTotal(data.total);
+                setResultsTruncated(data.truncated);
+              });
+            }
+          }
+        }}
+      />
     </div>
   );
 }

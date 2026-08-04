@@ -1,18 +1,20 @@
 import type {
   CreateWorkRequest,
+  ListWorksRequest,
+  ListWorksResponse,
   SearchWorksFilters,
+  SearchWorksResponse,
   UpdateWorkPaymentStatusRequest,
   UpdateWorkRequest,
   WorkDto,
-  WorkListItem,
 } from "@shared-types/ipc";
 import { unwrapIpc } from "@/shared/lib/ipc";
 
 export const worksApi = {
-  async list(): Promise<WorkListItem[]> {
-    return unwrapIpc(await window.labManager.works.list());
+  async list(params: ListWorksRequest = {}): Promise<ListWorksResponse> {
+    return unwrapIpc(await window.labManager.works.list(params));
   },
-  async search(filters: SearchWorksFilters): Promise<WorkListItem[]> {
+  async search(filters: SearchWorksFilters): Promise<SearchWorksResponse> {
     return unwrapIpc(await window.labManager.works.search(filters));
   },
   async get(id: string): Promise<WorkDto> {

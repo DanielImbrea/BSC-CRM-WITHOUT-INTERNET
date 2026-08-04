@@ -1,11 +1,25 @@
+import type { ListTechniciansRequest } from "@shared-types/ipc";
 import { techniciansRepository, type TechnicianRecord } from "../infrastructure/technicians-repository";
 import { assertTechnicianIsValid, type TechnicianInput } from "../domain/technician-validation";
 import { NotFoundError } from "../../../shared/errors";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
 
-export async function listTechnicians(): Promise<TechnicianRecord[]> {
+export async function listTechnicians(params: ListTechniciansRequest = {}): Promise<{
+  items: TechnicianRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   requireAuthenticated();
-  return techniciansRepository.findAll();
+  if (params.all) {
+    const items = await techniciansRepository.findAll();
+    return { items, total: items.length, page: 1, pageSize: items.length };
+  }
+  return techniciansRepository.findPage({
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 50,
+    search: params.search,
+  });
 }
 
 export async function createTechnician(input: TechnicianInput): Promise<TechnicianRecord> {

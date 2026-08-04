@@ -1,6 +1,8 @@
 import { IPC_CHANNELS } from "@shared-types/ipc";
 import type {
   TechnicianDto,
+  ListTechniciansRequest,
+  ListTechniciansResponse,
   CreateTechnicianRequest,
   UpdateTechnicianRequest,
   DeleteTechnicianRequest,
@@ -20,10 +22,18 @@ function toDto(record: TechnicianRecord): TechnicianDto {
 }
 
 export function registerTechniciansHandlers(): void {
-  registerIpcHandler<void, TechnicianDto[]>(IPC_CHANNELS.TECHNICIANS_LIST, async () => {
-    const rows = await technicianUseCases.listTechnicians();
-    return rows.map(toDto);
-  });
+  registerIpcHandler<ListTechniciansRequest | void, ListTechniciansResponse>(
+    IPC_CHANNELS.TECHNICIANS_LIST,
+    async (payload) => {
+      const result = await technicianUseCases.listTechnicians(payload ?? {});
+      return {
+        items: result.items.map(toDto),
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+  );
 
   registerIpcHandler<CreateTechnicianRequest, TechnicianDto>(
     IPC_CHANNELS.TECHNICIANS_CREATE,

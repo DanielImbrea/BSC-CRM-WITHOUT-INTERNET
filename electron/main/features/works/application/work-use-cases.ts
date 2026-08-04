@@ -1,5 +1,5 @@
 import { Prisma } from "../../../shared/prisma";
-import type { PaymentStatus, SearchWorksFilters } from "@shared-types/ipc";
+import type { ListWorksRequest, PaymentStatus, SearchWorksFilters } from "@shared-types/ipc";
 import { getPrismaClient } from "../../../shared/db";
 import {
   worksRepository,
@@ -34,6 +34,8 @@ function toPersistence(input: WorkInput) {
     lines: input.lines.map((line) => ({
       workTypeId: line.workTypeId,
       technicianId: line.technicianId ?? null,
+      technician2Id: line.technician2Id ?? null,
+      technician3Id: line.technician3Id ?? null,
       quantity: line.quantity,
       doctorUnitPrice: line.doctorUnitPrice,
       technicianUnitPrice: line.technicianUnitPrice,
@@ -41,12 +43,25 @@ function toPersistence(input: WorkInput) {
   };
 }
 
-export async function listWorks(): Promise<WorkListRecord[]> {
+export async function listWorks(params: ListWorksRequest = {}): Promise<{
+  items: WorkListRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   requireAuthenticated();
-  return worksRepository.findAll();
+  return worksRepository.findPage({
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 50,
+    month: params.month,
+  });
 }
 
-export async function searchWorks(filters: SearchWorksFilters): Promise<WorkListRecord[]> {
+export async function searchWorks(filters: SearchWorksFilters): Promise<{
+  items: WorkListRecord[];
+  total: number;
+  truncated: boolean;
+}> {
   requireAuthenticated();
   return worksRepository.search(filters);
 }

@@ -35,6 +35,39 @@ export const doctorsRepository = {
     return rows.map(toRecord);
   },
 
+  async findPage(params: {
+    page: number;
+    pageSize: number;
+    search?: string;
+  }): Promise<{ items: DoctorRecord[]; total: number; page: number; pageSize: number }> {
+    const db = getPrismaClient();
+    const page = Math.max(1, params.page);
+    const pageSize = Math.min(200, Math.max(1, params.pageSize));
+    const term = params.search?.trim();
+    const where = term
+      ? {
+          OR: [
+            { name: { contains: term } },
+            { phone: { contains: term } },
+            { email: { contains: term } },
+          ],
+        }
+      : {};
+
+    const [total, rows] = await Promise.all([
+      db.doctor.count({ where }),
+      db.doctor.findMany({
+        where,
+        orderBy: { name: "asc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { _count: { select: { works: true } } },
+      }),
+    ]);
+
+    return { items: rows.map(toRecord), total, page, pageSize };
+  },
+
   async findById(id: string): Promise<DoctorRecord | null> {
     const db = getPrismaClient();
     const row = await db.doctor.findUnique({

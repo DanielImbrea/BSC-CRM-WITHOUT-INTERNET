@@ -1,12 +1,26 @@
+import type { ListWorkTypesRequest } from "@shared-types/ipc";
 import { Prisma } from "../../../shared/prisma";
 import { workTypesRepository, type WorkTypeRecord } from "../infrastructure/work-types-repository";
 import { assertWorkTypeIsValid, type WorkTypeInput } from "../domain/work-type-validation";
 import { NotFoundError, ConflictError } from "../../../shared/errors";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
 
-export async function listWorkTypes(): Promise<WorkTypeRecord[]> {
+export async function listWorkTypes(params: ListWorkTypesRequest = {}): Promise<{
+  items: WorkTypeRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   requireAuthenticated();
-  return workTypesRepository.findAll();
+  if (params.all) {
+    const items = await workTypesRepository.findAll();
+    return { items, total: items.length, page: 1, pageSize: items.length };
+  }
+  return workTypesRepository.findPage({
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 50,
+    search: params.search,
+  });
 }
 
 export async function createWorkType(input: WorkTypeInput): Promise<WorkTypeRecord> {

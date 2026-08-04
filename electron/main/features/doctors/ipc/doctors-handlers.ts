@@ -2,6 +2,8 @@ import { IPC_CHANNELS } from "@shared-types/ipc";
 import type {
   DoctorDto,
   DoctorListItem,
+  ListDoctorsRequest,
+  ListDoctorsResponse,
   CreateDoctorRequest,
   UpdateDoctorRequest,
   DeleteDoctorRequest,
@@ -34,10 +36,18 @@ function toListItem(record: DoctorRecord): DoctorListItem {
 }
 
 export function registerDoctorsHandlers(): void {
-  registerIpcHandler<void, DoctorListItem[]>(IPC_CHANNELS.DOCTORS_LIST, async () => {
-    const doctors = await doctorUseCases.listDoctors();
-    return doctors.map(toListItem);
-  });
+  registerIpcHandler<ListDoctorsRequest | void, ListDoctorsResponse>(
+    IPC_CHANNELS.DOCTORS_LIST,
+    async (payload) => {
+      const result = await doctorUseCases.listDoctors(payload ?? {});
+      return {
+        items: result.items.map(toListItem),
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      };
+    },
+  );
 
   registerIpcHandler<{ id: string }, DoctorDto>(IPC_CHANNELS.DOCTORS_GET, async (payload) => {
     return toDto(await doctorUseCases.getDoctor(payload.id));

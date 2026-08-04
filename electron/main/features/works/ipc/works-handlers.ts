@@ -2,6 +2,9 @@ import { IPC_CHANNELS } from "@shared-types/ipc";
 import type {
   WorkDto,
   WorkListItem,
+  ListWorksRequest,
+  ListWorksResponse,
+  SearchWorksResponse,
   CreateWorkRequest,
   UpdateWorkRequest,
   UpdateWorkPaymentStatusRequest,
@@ -25,6 +28,10 @@ function toLineDto(line: WorkDetailRecord["lines"][number]): WorkLineDto {
     workTypeName: line.workTypeName,
     technicianId: line.technicianId,
     technicianName: line.technicianName,
+    technician2Id: line.technician2Id,
+    technician2Name: line.technician2Name,
+    technician3Id: line.technician3Id,
+    technician3Name: line.technician3Name,
     quantity: line.quantity,
     doctorUnitPrice: line.doctorUnitPrice,
     technicianUnitPrice: line.technicianUnitPrice,
@@ -39,6 +46,7 @@ function toListItem(record: WorkListRecord): WorkListItem {
     entryDate: record.entryDate.toISOString(),
     patientName: record.patientName,
     doctorName: record.doctorName,
+    observations: record.observations,
     paymentStatus: record.paymentStatus,
     doctorTotal: record.doctorTotal,
     technicianTotal: record.technicianTotal,
@@ -74,14 +82,23 @@ function toDto(record: WorkDetailRecord): WorkDto {
 }
 
 export function registerWorksHandlers(): void {
-  registerIpcHandler<void, WorkListItem[]>(IPC_CHANNELS.WORKS_LIST, async () => {
-    const works = await workUseCases.listWorks();
-    return works.map(toListItem);
+  registerIpcHandler<ListWorksRequest | void, ListWorksResponse>(IPC_CHANNELS.WORKS_LIST, async (payload) => {
+    const result = await workUseCases.listWorks(payload ?? {});
+    return {
+      items: result.items.map(toListItem),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    };
   });
 
-  registerIpcHandler<SearchWorksFilters, WorkListItem[]>(IPC_CHANNELS.WORKS_SEARCH, async (payload) => {
-    const works = await workUseCases.searchWorks(payload);
-    return works.map(toListItem);
+  registerIpcHandler<SearchWorksFilters, SearchWorksResponse>(IPC_CHANNELS.WORKS_SEARCH, async (payload) => {
+    const result = await workUseCases.searchWorks(payload);
+    return {
+      items: result.items.map(toListItem),
+      total: result.total,
+      truncated: result.truncated,
+    };
   });
 
   registerIpcHandler<{ id: string }, WorkDto>(IPC_CHANNELS.WORKS_GET, async (payload) => {

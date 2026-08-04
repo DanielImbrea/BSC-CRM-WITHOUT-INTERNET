@@ -1,13 +1,15 @@
 import type {
   CreateTechnicianRequest,
+  ListTechniciansRequest,
+  ListTechniciansResponse,
   TechnicianDto,
   UpdateTechnicianRequest,
 } from "@shared-types/ipc";
 import { unwrapIpc } from "@/shared/lib/ipc";
 
 export const techniciansApi = {
-  async list(): Promise<TechnicianDto[]> {
-    return unwrapIpc(await window.labManager.technicians.list());
+  async list(params: ListTechniciansRequest = {}): Promise<ListTechniciansResponse> {
+    return unwrapIpc(await window.labManager.technicians.list(params));
   },
   async create(payload: CreateTechnicianRequest): Promise<TechnicianDto> {
     return unwrapIpc(await window.labManager.technicians.create(payload));
