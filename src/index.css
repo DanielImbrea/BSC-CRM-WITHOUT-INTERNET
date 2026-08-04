@@ -47,3 +47,411 @@
     font-feature-settings: "cv11", "ss01";
   }
 }
+
+@media print {
+  @page {
+    margin: 10mm;
+    size: A4;
+  }
+
+  html,
+  body,
+  #root,
+  #root > * {
+    background: #ffffff !important;
+    color: #18181b !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  [data-no-print],
+  aside,
+  .print\:hidden,
+  [role="tabpanel"][hidden] {
+    display: none !important;
+  }
+
+  main,
+  main > * {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .report-print-document {
+    background: #ffffff !important;
+    color: #18181b !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .report-print-sheet {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 6mm 12mm 8mm;
+  }
+
+  .report-print-header {
+    display: block !important;
+  }
+
+  .report-print-footer {
+    display: flex !important;
+  }
+
+  .report-print-letterhead {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+    padding-bottom: 5mm;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  .report-print-logo {
+    flex-shrink: 0;
+    height: 14mm;
+    width: auto;
+    max-width: 24mm;
+    object-fit: contain;
+  }
+
+  .report-print-letterhead-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .report-print-brand-name {
+    margin: 0;
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #18181b !important;
+  }
+
+  .report-print-brand-tag {
+    margin: 1mm 0 0;
+    font-size: 9pt;
+    color: #71717a !important;
+  }
+
+  .report-print-title-card {
+    margin: 6mm 0 7mm;
+    padding: 5mm 6mm;
+    background: #f8fafc !important;
+    border-left: 4px solid #4338ca;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .report-print-doc-label {
+    margin: 0;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #4338ca !important;
+  }
+
+  .report-print-title-card h1 {
+    margin: 2mm 0 0;
+    font-size: 20pt;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #09090b !important;
+  }
+
+  .report-print-subtitle {
+    margin: 1.5mm 0 0;
+    font-size: 10.5pt;
+    color: #52525b !important;
+  }
+
+  .report-print-body {
+    margin-top: 0;
+  }
+
+  .report-print-footer {
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8mm;
+    margin-top: 8mm;
+    padding-top: 4mm;
+    border-top: 1px solid #e4e4e7;
+  }
+
+  .report-print-footer-brand {
+    margin: 0;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #52525b !important;
+  }
+
+  .report-print-footer p:last-child {
+    margin: 0;
+    font-size: 8.5pt;
+    color: #71717a !important;
+    text-align: right;
+  }
+
+  .report-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid #d4d4d8;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .report-print-th {
+    padding: 3mm 3mm !important;
+    font-size: 8pt;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: left;
+    color: #3f3f46 !important;
+    background: #f4f4f5 !important;
+    border-bottom: 1px solid #d4d4d8 !important;
+  }
+
+  .report-print-th.text-right {
+    text-align: right;
+  }
+
+  .report-print-th.text-center,
+  .report-print-td.text-center {
+    text-align: center;
+  }
+
+  .report-print-col-index {
+    width: 9mm;
+    max-width: 9mm;
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
+  }
+
+  .report-print-td {
+    padding: 3mm 3mm !important;
+    font-size: 10pt;
+    color: #18181b !important;
+    border-bottom: 1px solid #e4e4e7 !important;
+    vertical-align: top;
+    word-wrap: break-word;
+  }
+
+  .report-print-td-muted {
+    color: #3f3f46 !important;
+  }
+
+  .report-print-td.text-right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .report-print-table tbody tr:nth-child(even):not(.report-print-total-row) .report-print-td {
+    background: #fafafa !important;
+  }
+
+  .report-print-total-row .report-print-td,
+  .report-print-total-row td {
+    padding-top: 3.5mm !important;
+    padding-bottom: 3.5mm !important;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #09090b !important;
+    background: #eef2ff !important;
+    border-top: 2px solid #4338ca !important;
+    border-bottom: none !important;
+  }
+}
+
+/* Export PDF — aceleași reguli vizuale ca la print */
+html.report-pdf-export,
+html.report-pdf-export body,
+html.report-pdf-export #root,
+html.report-pdf-export #root > * {
+  background: #ffffff !important;
+  color: #18181b !important;
+  min-height: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+html.report-pdf-export [data-no-print],
+html.report-pdf-export aside,
+html.report-pdf-export .print\:hidden,
+html.report-pdf-export [role="tabpanel"][hidden] {
+  display: none !important;
+}
+
+html.report-pdf-export main,
+html.report-pdf-export main > * {
+  overflow: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: #ffffff !important;
+}
+
+html.report-pdf-export .report-print-document {
+  background: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+html.report-pdf-export .report-print-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6mm 12mm 8mm;
+}
+
+html.report-pdf-export .report-print-header {
+  display: block !important;
+}
+
+html.report-pdf-export .report-print-footer {
+  display: flex !important;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-top: 8mm;
+  padding-top: 4mm;
+  border-top: 1px solid #e4e4e7;
+}
+
+html.report-pdf-export .report-print-letterhead {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  padding-bottom: 5mm;
+  border-bottom: 1px solid #e4e4e7;
+}
+
+html.report-pdf-export .report-print-logo {
+  flex-shrink: 0;
+  height: 14mm;
+  width: auto;
+  max-width: 24mm;
+  object-fit: contain;
+}
+
+html.report-pdf-export .report-print-brand-name {
+  margin: 0;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #18181b !important;
+}
+
+html.report-pdf-export .report-print-brand-tag {
+  margin: 1mm 0 0;
+  font-size: 9pt;
+  color: #71717a !important;
+}
+
+html.report-pdf-export .report-print-title-card {
+  margin: 6mm 0 7mm;
+  padding: 5mm 6mm;
+  background: #f8fafc !important;
+  border-left: 4px solid #4338ca;
+  border-radius: 0 4px 4px 0;
+}
+
+html.report-pdf-export .report-print-doc-label {
+  margin: 0;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #4338ca !important;
+}
+
+html.report-pdf-export .report-print-title-card h1 {
+  margin: 2mm 0 0;
+  font-size: 20pt;
+  font-weight: 700;
+  color: #09090b !important;
+}
+
+html.report-pdf-export .report-print-subtitle {
+  margin: 1.5mm 0 0;
+  font-size: 10.5pt;
+  color: #52525b !important;
+}
+
+html.report-pdf-export .report-print-footer-brand {
+  margin: 0;
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: #52525b !important;
+}
+
+html.report-pdf-export .report-print-footer p:last-child {
+  margin: 0;
+  font-size: 8.5pt;
+  color: #71717a !important;
+}
+
+html.report-pdf-export .report-print-th {
+  padding: 3mm 3mm !important;
+  font-size: 8pt;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3f3f46 !important;
+  background: #f4f4f5 !important;
+  border-bottom: 1px solid #d4d4d8 !important;
+}
+
+html.report-pdf-export .report-print-col-index {
+  width: 9mm;
+  max-width: 9mm;
+}
+
+html.report-pdf-export .report-print-th.text-center,
+html.report-pdf-export .report-print-td.text-center {
+  text-align: center;
+}
+
+html.report-pdf-export .report-print-td {
+  padding: 3mm 3mm !important;
+  font-size: 10pt;
+  color: #18181b !important;
+  border-bottom: 1px solid #e4e4e7 !important;
+}
+
+html.report-pdf-export .report-print-td-muted {
+  color: #3f3f46 !important;
+}
+
+html.report-pdf-export .report-print-table {
+  border: 1px solid #d4d4d8;
+  border-radius: 4px;
+}
+
+html.report-pdf-export .report-print-table tbody tr:nth-child(even):not(.report-print-total-row) .report-print-td {
+  background: #fafafa !important;
+}
+
+html.report-pdf-export .report-print-total-row .report-print-td,
+html.report-pdf-export .report-print-total-row td {
+  font-weight: 700;
+  background: #eef2ff !important;
+  border-top: 2px solid #4338ca !important;
+  border-bottom: none !important;
+}

@@ -26,8 +26,8 @@ export const workTypesRepository = {
     return db.workType.create({
       data: {
         name: input.name.trim(),
-        doctorPrice: input.doctorPrice,
-        technicianPrice: input.technicianPrice,
+        doctorPrice: 0,
+        technicianPrice: 0,
       },
     });
   },
@@ -38,8 +38,6 @@ export const workTypesRepository = {
       where: { id },
       data: {
         name: input.name.trim(),
-        doctorPrice: input.doctorPrice,
-        technicianPrice: input.technicianPrice,
       },
     });
   },

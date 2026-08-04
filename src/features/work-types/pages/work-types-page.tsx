@@ -29,7 +29,9 @@ export function WorkTypesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Tipuri lucrări</h1>
-          <p className="text-sm text-muted-foreground">Catalogul tipurilor de lucrări și prețurile implicite.</p>
+          <p className="text-sm text-muted-foreground">
+            Catalogul tipurilor de lucrări. Prețurile se setează per doctor și tehnician, din paginile lor.
+          </p>
         </div>
         <Button onClick={openCreateForm} className="gap-2">
           <Plus className="h-4 w-4" />

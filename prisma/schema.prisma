@@ -28,6 +28,8 @@ model Doctor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   works     Work[]
+  rates     DoctorRate[]
+  technicianRates TechnicianRate[]
 
   @@index([name])
 }
@@ -41,22 +43,59 @@ model Technician {
   worksAs1   Work[]   @relation("WorkTechnician1")
   worksAs2   Work[]   @relation("WorkTechnician2")
   worksAs3   Work[]   @relation("WorkTechnician3")
+  workLines  WorkLine[]
+  rates      TechnicianRate[]
 
   @@index([name])
   @@index([active])
 }
 
-// Catalog tipuri lucrări — preț doctor vs preț tehnician (per bucată).
+// Catalog tipuri lucrări (nume). Prețurile reale sunt în DoctorRate / TechnicianRate.
 model WorkType {
   id              String     @id @default(cuid())
   name            String
-  doctorPrice     Int
-  technicianPrice Int
+  doctorPrice     Int        @default(0)
+  technicianPrice Int        @default(0)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   lines           WorkLine[]
+  doctorRates     DoctorRate[]
+  technicianRates TechnicianRate[]
 
   @@index([name])
+}
+
+// Preț per doctor × tip lucrare (cât plătește cabinetul laboratorului).
+model DoctorRate {
+  id           String   @id @default(cuid())
+  doctor       Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId     String
+  workType     WorkType @relation(fields: [workTypeId], references: [id], onDelete: Cascade)
+  workTypeId   String
+  pricePerUnit Int
+  updatedAt    DateTime @updatedAt
+
+  @@unique([doctorId, workTypeId])
+  @@index([doctorId])
+  @@index([workTypeId])
+}
+
+// Preț per tehnician × doctor × tip lucrare (salariu tehnician).
+model TechnicianRate {
+  id           String     @id @default(cuid())
+  technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  technicianId String
+  doctor       Doctor     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId     String
+  workType     WorkType   @relation(fields: [workTypeId], references: [id], onDelete: Cascade)
+  workTypeId   String
+  pricePerUnit Int
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([technicianId, doctorId, workTypeId])
+  @@index([technicianId])
+  @@index([doctorId])
+  @@index([workTypeId])
 }
 
 // NEPLATITA | PLATITA_DOCTOR | PLATITA_TEHNICIAN
@@ -85,18 +124,21 @@ model Work {
 }
 
 model WorkLine {
-  id                  String   @id @default(cuid())
-  work                Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+  id                  String      @id @default(cuid())
+  work                Work        @relation(fields: [workId], references: [id], onDelete: Cascade)
   workId              String
-  workType            WorkType @relation(fields: [workTypeId], references: [id], onDelete: Restrict)
+  workType            WorkType    @relation(fields: [workTypeId], references: [id], onDelete: Restrict)
   workTypeId          String
+  technician          Technician? @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+  technicianId        String?
   quantity            Int
   doctorUnitPrice     Int
   technicianUnitPrice Int
-  createdAt           DateTime @default(now())
+  createdAt           DateTime    @default(now())
 
   @@index([workId])
   @@index([workTypeId])
+  @@index([technicianId])
 }
 
 model Setting {

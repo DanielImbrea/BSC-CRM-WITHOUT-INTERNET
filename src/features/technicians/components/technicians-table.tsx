@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Grid3X3 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import type { TechnicianDto } from "@shared-types/ipc";
@@ -7,9 +7,10 @@ interface TechniciansTableProps {
   technicians: TechnicianDto[];
   onEdit: (technician: TechnicianDto) => void;
   onDelete: (technician: TechnicianDto) => void;
+  onRates: (technician: TechnicianDto) => void;
 }
 
-export function TechniciansTable({ technicians, onEdit, onDelete }: TechniciansTableProps) {
+export function TechniciansTable({ technicians, onEdit, onDelete, onRates }: TechniciansTableProps) {
   if (technicians.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border py-16 text-center">
@@ -40,6 +41,14 @@ export function TechniciansTable({ technicians, onEdit, onDelete }: TechniciansT
               </td>
               <td className="px-4 py-3">
                 <div className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRates(technician)}
+                    aria-label="Grilă tarife"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => onEdit(technician)} aria-label="Editează">
                     <Pencil className="h-4 w-4" />
                   </Button>

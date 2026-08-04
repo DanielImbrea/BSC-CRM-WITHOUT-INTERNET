@@ -13,8 +13,6 @@ function toDto(record: WorkTypeRecord): WorkTypeDto {
   return {
     id: record.id,
     name: record.name,
-    doctorPrice: record.doctorPrice,
-    technicianPrice: record.technicianPrice,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };

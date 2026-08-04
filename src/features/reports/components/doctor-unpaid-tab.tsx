@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Printer } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -14,6 +13,11 @@ import {
 import { formatDate, formatRon } from "@/shared/lib/format";
 import { useDoctors } from "@/features/doctors/hooks/use-doctors";
 import { useDoctorUnpaidReport } from "../hooks/use-reports";
+import { ReportExportButtons } from "./report-export-buttons";
+import { ReportPrintLayout } from "./report-print-layout";
+import { ReportPrintTable, ReportPrintTd, ReportPrintTh } from "./report-print-table";
+import { buildReportPdfFileName } from "../lib/report-file-name";
+import { formatReportMonthLabel } from "../lib/report-month-label";
 import type { DoctorUnpaidReport } from "@shared-types/ipc";
 
 export function DoctorUnpaidTab() {
@@ -28,10 +32,6 @@ export function DoctorUnpaidTab() {
     if (!doctorId) return;
     const data = await reportMutation.mutateAsync({ doctorId, month });
     setReport(data);
-  }
-
-  function handlePrint() {
-    window.print();
   }
 
   return (
@@ -69,50 +69,57 @@ export function DoctorUnpaidTab() {
 
       {report && (
         <div className="flex flex-col gap-4">
-          <div className="flex justify-end print:hidden">
-            <Button variant="outline" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" />
-              Tipărește
-            </Button>
-          </div>
+          <ReportExportButtons
+            pdfFileName={buildReportPdfFileName("raport-neplatite", report.doctorName, report.month)}
+          />
 
-          <div id="doctor-unpaid-report" className="rounded-lg border border-border bg-card p-6 print:border-0 print:p-0">
-            <h2 className="mb-1 text-lg font-semibold text-foreground">{report.doctorName}</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Lucrări neplătite — {report.month}
-            </p>
-
-            {report.lines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nicio lucrare neplătită în această lună.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Data</th>
-                    <th className="py-2 pr-4 font-medium">Pacient</th>
-                    <th className="py-2 pr-4 font-medium">Lucrări</th>
-                    <th className="py-2 font-medium text-right">Sumă</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.lines.map((line) => (
-                    <tr key={line.workId} className="border-b border-border last:border-0">
-                      <td className="py-2 pr-4 text-muted-foreground">{formatDate(line.entryDate)}</td>
-                      <td className="py-2 pr-4">{line.patientName}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{line.workSummary}</td>
-                      <td className="py-2 text-right">{formatRon(line.amount)}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-semibold">
-                    <td colSpan={3} className="py-3 pr-4 text-right">
-                      Total
-                    </td>
-                    <td className="py-3 text-right">{formatRon(report.totalAmount)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
-          </div>
+          <ReportPrintLayout
+            id="doctor-unpaid-report"
+            personName={report.doctorName}
+            reportTitle={`Lucrări neplătite — ${formatReportMonthLabel(report.month)}`}
+          >
+            <ReportPrintTable
+              isEmpty={report.lines.length === 0}
+              emptyMessage="Nicio lucrare neplătită în această lună."
+              columns={
+                <>
+                  <ReportPrintTh narrow align="center">
+                    {" "}
+                  </ReportPrintTh>
+                  <ReportPrintTh>Doctor</ReportPrintTh>
+                  <ReportPrintTh>Data intrare</ReportPrintTh>
+                  <ReportPrintTh>Pacient</ReportPrintTh>
+                  <ReportPrintTh>Lucrări</ReportPrintTh>
+                  <ReportPrintTh align="right">Sumă</ReportPrintTh>
+                </>
+              }
+              totalLabel={
+                report.lines.length > 0 ? (
+                  <ReportPrintTd colSpan={5} align="right">
+                    Total
+                  </ReportPrintTd>
+                ) : undefined
+              }
+              totalValue={
+                report.lines.length > 0 ? (
+                  <ReportPrintTd align="right">{formatRon(report.totalAmount)}</ReportPrintTd>
+                ) : undefined
+              }
+            >
+              {report.lines.map((line, index) => (
+                <tr key={line.workId}>
+                  <ReportPrintTd narrow align="center" muted>
+                    {index + 1}
+                  </ReportPrintTd>
+                  <ReportPrintTd>{report.doctorName}</ReportPrintTd>
+                  <ReportPrintTd muted>{formatDate(line.entryDate)}</ReportPrintTd>
+                  <ReportPrintTd>{line.patientName}</ReportPrintTd>
+                  <ReportPrintTd muted>{line.workSummary}</ReportPrintTd>
+                  <ReportPrintTd align="right">{formatRon(line.amount)}</ReportPrintTd>
+                </tr>
+              ))}
+            </ReportPrintTable>
+          </ReportPrintLayout>
         </div>
       )}
     </div>

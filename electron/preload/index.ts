@@ -21,12 +21,20 @@ const api: LabManagerApi = {
     create: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_CREATE, payload),
     update: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_UPDATE, payload),
     delete: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_DELETE, payload),
+    getRates: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_GET_RATES, payload),
+    saveRates: (payload) => ipcRenderer.invoke(IPC_CHANNELS.DOCTORS_SAVE_RATES, payload),
   },
   technicians: {
     list: () => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_LIST),
     create: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_CREATE, payload),
     update: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_UPDATE, payload),
     delete: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_DELETE, payload),
+    getRates: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_GET_RATES, payload),
+    saveRates: (payload) => ipcRenderer.invoke(IPC_CHANNELS.TECHNICIANS_SAVE_RATES, payload),
+  },
+  rates: {
+    lookupLinePrices: (payload) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RATES_LOOKUP_LINE_PRICES, payload),
   },
   workTypes: {
     list: () => ipcRenderer.invoke(IPC_CHANNELS.WORK_TYPES_LIST),
@@ -48,6 +56,9 @@ const api: LabManagerApi = {
     getDoctorUnpaid: (payload) => ipcRenderer.invoke(IPC_CHANNELS.REPORTS_DOCTOR_UNPAID, payload),
     getTechnicianSalary: (payload) =>
       ipcRenderer.invoke(IPC_CHANNELS.REPORTS_TECHNICIAN_SALARY, payload),
+  },
+  export: {
+    saveReportPdf: (payload) => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_SAVE_REPORT_PDF, payload),
   },
   backup: {
     list: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_LIST),

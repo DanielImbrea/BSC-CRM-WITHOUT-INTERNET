@@ -8,6 +8,8 @@ import { logger } from "./logger";
 /** Tabele obligatorii din schema curentă — verificare completă, nu doar AppAuth. */
 const REQUIRED_TABLES = [
   "AppAuth",
+  "DoctorRate",
+  "TechnicianRate",
   "Doctor",
   "Technician",
   "WorkType",

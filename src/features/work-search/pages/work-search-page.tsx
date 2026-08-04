@@ -29,9 +29,7 @@ export function WorkSearchPage() {
 
   const [doctorId, setDoctorId] = React.useState("");
   const [patientName, setPatientName] = React.useState("");
-  const [technician1Id, setTechnician1Id] = React.useState("");
-  const [technician2Id, setTechnician2Id] = React.useState("");
-  const [technician3Id, setTechnician3Id] = React.useState("");
+  const [technicianId, setTechnicianId] = React.useState("");
   const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus | "">("");
   const [month, setMonth] = React.useState(format(new Date(), "yyyy-MM"));
   const [results, setResults] = React.useState<WorkListItem[] | null>(null);
@@ -43,9 +41,7 @@ export function WorkSearchPage() {
     const filters: SearchWorksFilters = {};
     if (doctorId) filters.doctorId = doctorId;
     if (patientName.trim()) filters.patientName = patientName.trim();
-    if (technician1Id) filters.technician1Id = technician1Id;
-    if (technician2Id) filters.technician2Id = technician2Id;
-    if (technician3Id) filters.technician3Id = technician3Id;
+    if (technicianId) filters.technicianId = technicianId;
     if (paymentStatus) filters.paymentStatus = paymentStatus;
     if (month) filters.month = month;
 
@@ -107,28 +103,22 @@ export function WorkSearchPage() {
             />
           </div>
 
-          {([1, 2, 3] as const).map((n) => {
-            const value = n === 1 ? technician1Id : n === 2 ? technician2Id : technician3Id;
-            const setValue = n === 1 ? setTechnician1Id : n === 2 ? setTechnician2Id : setTechnician3Id;
-            return (
-              <div key={n} className="flex flex-col gap-1.5">
-                <Label>Tehnician {n}</Label>
-                <Select value={value || NONE} onValueChange={(v) => setValue(v === NONE ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Oricare" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Oricare</SelectItem>
-                    {activeTechnicians.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            );
-          })}
+          <div className="flex flex-col gap-1.5">
+            <Label>Tehnician (pe linie)</Label>
+            <Select value={technicianId || NONE} onValueChange={(v) => setTechnicianId(v === NONE ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Oricare" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Oricare</SelectItem>
+                {activeTechnicians.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="mt-4 flex justify-end">

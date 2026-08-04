@@ -7,6 +7,8 @@ export interface WorkLineRecord {
   id: string;
   workTypeId: string;
   workTypeName: string;
+  technicianId: string | null;
+  technicianName: string | null;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
@@ -53,7 +55,7 @@ type WorkWithRelations = Prisma.WorkGetPayload<{
     technician1: true;
     technician2: true;
     technician3: true;
-    lines: { include: { workType: true } };
+    lines: { include: { workType: true; technician: true } };
   };
 }>;
 
@@ -62,10 +64,24 @@ function mapLines(work: WorkWithRelations): WorkLineRecord[] {
     id: line.id,
     workTypeId: line.workTypeId,
     workTypeName: line.workType.name,
+    technicianId: line.technicianId,
+    technicianName: line.technician?.name ?? null,
     quantity: line.quantity,
     doctorUnitPrice: line.doctorUnitPrice,
     technicianUnitPrice: line.technicianUnitPrice,
   }));
+}
+
+function uniqueTechnicianNames(lines: WorkLineRecord[]): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const line of lines) {
+    if (line.technicianName && !seen.has(line.technicianName)) {
+      seen.add(line.technicianName);
+      names.push(line.technicianName);
+    }
+  }
+  return names;
 }
 
 export function computeDoctorTotal(lines: Pick<WorkLineRecord, "quantity" | "doctorUnitPrice">[]): number {
@@ -84,6 +100,7 @@ export function buildWorkSummary(lines: Pick<WorkLineRecord, "quantity" | "workT
 
 function toListRecord(work: WorkWithRelations): WorkListRecord {
   const lines = mapLines(work);
+  const techNames = uniqueTechnicianNames(lines);
   return {
     id: work.id,
     entryDate: work.entryDate,
@@ -93,9 +110,9 @@ function toListRecord(work: WorkWithRelations): WorkListRecord {
     doctorTotal: computeDoctorTotal(lines),
     technicianTotal: computeTechnicianTotal(lines),
     workSummary: buildWorkSummary(lines),
-    technician1Name: work.technician1?.name ?? null,
-    technician2Name: work.technician2?.name ?? null,
-    technician3Name: work.technician3?.name ?? null,
+    technician1Name: techNames[0] ?? work.technician1?.name ?? null,
+    technician2Name: techNames[1] ?? work.technician2?.name ?? null,
+    technician3Name: techNames[2] ?? work.technician3?.name ?? null,
   };
 }
 
@@ -128,7 +145,10 @@ const workInclude = {
   technician1: true,
   technician2: true,
   technician3: true,
-  lines: { include: { workType: true }, orderBy: { createdAt: "asc" as const } },
+  lines: {
+    include: { workType: true, technician: true },
+    orderBy: { createdAt: "asc" as const },
+  },
 };
 
 function buildWhere(filters: SearchWorksFilters): Prisma.WorkWhereInput {
@@ -136,6 +156,9 @@ function buildWhere(filters: SearchWorksFilters): Prisma.WorkWhereInput {
   if (filters.doctorId) where.doctorId = filters.doctorId;
   if (filters.patientName?.trim()) {
     where.patientName = { contains: filters.patientName.trim() };
+  }
+  if (filters.technicianId) {
+    where.lines = { some: { technicianId: filters.technicianId } };
   }
   if (filters.technician1Id) where.technician1Id = filters.technician1Id;
   if (filters.technician2Id) where.technician2Id = filters.technician2Id;
@@ -183,6 +206,7 @@ export const worksRepository = {
       technician3Id: string | null;
       lines: {
         workTypeId: string;
+        technicianId: string | null;
         quantity: number;
         doctorUnitPrice: number;
         technicianUnitPrice: number;
@@ -200,7 +224,15 @@ export const worksRepository = {
         technician1Id: data.technician1Id,
         technician2Id: data.technician2Id,
         technician3Id: data.technician3Id,
-        lines: { create: data.lines },
+        lines: {
+          create: data.lines.map((line) => ({
+            workTypeId: line.workTypeId,
+            technicianId: line.technicianId,
+            quantity: line.quantity,
+            doctorUnitPrice: line.doctorUnitPrice,
+            technicianUnitPrice: line.technicianUnitPrice,
+          })),
+        },
       },
       include: workInclude,
     });
@@ -220,6 +252,7 @@ export const worksRepository = {
       technician3Id: string | null;
       lines: {
         workTypeId: string;
+        technicianId: string | null;
         quantity: number;
         doctorUnitPrice: number;
         technicianUnitPrice: number;
@@ -239,7 +272,15 @@ export const worksRepository = {
         technician1Id: data.technician1Id,
         technician2Id: data.technician2Id,
         technician3Id: data.technician3Id,
-        lines: { create: data.lines },
+        lines: {
+          create: data.lines.map((line) => ({
+            workTypeId: line.workTypeId,
+            technicianId: line.technicianId,
+            quantity: line.quantity,
+            doctorUnitPrice: line.doctorUnitPrice,
+            technicianUnitPrice: line.technicianUnitPrice,
+          })),
+        },
       },
       include: workInclude,
     });

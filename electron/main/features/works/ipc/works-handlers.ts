@@ -23,6 +23,8 @@ function toLineDto(line: WorkDetailRecord["lines"][number]): WorkLineDto {
     id: line.id,
     workTypeId: line.workTypeId,
     workTypeName: line.workTypeName,
+    technicianId: line.technicianId,
+    technicianName: line.technicianName,
     quantity: line.quantity,
     doctorUnitPrice: line.doctorUnitPrice,
     technicianUnitPrice: line.technicianUnitPrice,

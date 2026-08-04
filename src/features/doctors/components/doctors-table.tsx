@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Banknote } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { DoctorListItem } from "@shared-types/ipc";
 
@@ -6,9 +6,10 @@ interface DoctorsTableProps {
   doctors: DoctorListItem[];
   onEdit: (doctor: DoctorListItem) => void;
   onDelete: (doctor: DoctorListItem) => void;
+  onRates: (doctor: DoctorListItem) => void;
 }
 
-export function DoctorsTable({ doctors, onEdit, onDelete }: DoctorsTableProps) {
+export function DoctorsTable({ doctors, onEdit, onDelete, onRates }: DoctorsTableProps) {
   if (doctors.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border py-16 text-center">
@@ -39,6 +40,9 @@ export function DoctorsTable({ doctors, onEdit, onDelete }: DoctorsTableProps) {
               <td className="px-4 py-3 text-muted-foreground">{doctor.worksCount}</td>
               <td className="px-4 py-3">
                 <div className="flex justify-end gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onRates(doctor)} aria-label="Tarife">
+                    <Banknote className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => onEdit(doctor)} aria-label="Editează">
                     <Pencil className="h-4 w-4" />
                   </Button>

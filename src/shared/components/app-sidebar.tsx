@@ -40,7 +40,10 @@ export function AppSidebar() {
   const { logout } = useAuth();
 
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-card">
+    <aside
+      data-no-print
+      className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-card print:hidden"
+    >
       <div className="flex h-14 items-center px-5">
         <span className="text-sm font-semibold tracking-tight text-foreground">Billionaire Smile Club CRM</span>
       </div>

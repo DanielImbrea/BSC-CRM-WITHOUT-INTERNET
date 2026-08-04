@@ -28,10 +28,16 @@ function toPersistence(input: WorkInput) {
     observations: input.observations?.trim() || null,
     paymentStatus: input.paymentStatus,
     doctorId: input.doctorId,
-    technician1Id: input.technician1Id ?? null,
-    technician2Id: input.technician2Id ?? null,
-    technician3Id: input.technician3Id ?? null,
-    lines: input.lines,
+    technician1Id: null,
+    technician2Id: null,
+    technician3Id: null,
+    lines: input.lines.map((line) => ({
+      workTypeId: line.workTypeId,
+      technicianId: line.technicianId ?? null,
+      quantity: line.quantity,
+      doctorUnitPrice: line.doctorUnitPrice,
+      technicianUnitPrice: line.technicianUnitPrice,
+    })),
   };
 }
 

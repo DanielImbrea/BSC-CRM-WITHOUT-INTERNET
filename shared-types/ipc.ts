@@ -100,28 +100,76 @@ export interface DeleteTechnicianRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Grile preț (doctor × tip lucrare; tehnician × doctor × tip lucrare)
+// ---------------------------------------------------------------------------
+export interface RateGridCell {
+  doctorId: string;
+  workTypeId: string;
+  pricePerUnit: number | null;
+}
+
+export interface DoctorRateRow {
+  workTypeId: string;
+  workTypeName: string;
+  pricePerUnit: number | null;
+}
+
+export interface GetDoctorRatesRequest {
+  doctorId: string;
+}
+
+export interface SaveDoctorRatesRequest {
+  doctorId: string;
+  rates: { workTypeId: string; pricePerUnit: number | null }[];
+}
+
+export interface GetTechnicianRatesRequest {
+  technicianId: string;
+}
+
+export interface SaveTechnicianRatesRequest {
+  technicianId: string;
+  rates: RateGridCell[];
+}
+
+export interface TechnicianRatesGrid {
+  technicianId: string;
+  doctors: { id: string; name: string }[];
+  workTypes: { id: string; name: string }[];
+  /** Map key: `${doctorId}:${workTypeId}` → price in bani (null = neconfigurat) */
+  prices: Record<string, number | null>;
+}
+
+export interface LookupLinePricesRequest {
+  doctorId: string;
+  workTypeId: string;
+  technicianId?: string;
+}
+
+export interface LookupLinePricesResponse {
+  doctorUnitPrice: number;
+  technicianUnitPrice: number;
+  doctorFromRate: boolean;
+  technicianFromRate: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Tipuri lucrări
 // ---------------------------------------------------------------------------
 export interface WorkTypeDto {
   id: string;
   name: string;
-  doctorPrice: number;
-  technicianPrice: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateWorkTypeRequest {
   name: string;
-  doctorPrice: number;
-  technicianPrice: number;
 }
 
 export interface UpdateWorkTypeRequest {
   id: string;
   name: string;
-  doctorPrice: number;
-  technicianPrice: number;
 }
 
 export interface DeleteWorkTypeRequest {
@@ -137,6 +185,8 @@ export interface WorkLineDto {
   id: string;
   workTypeId: string;
   workTypeName: string;
+  technicianId: string | null;
+  technicianName: string | null;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
@@ -181,6 +231,7 @@ export interface WorkDto {
 
 export interface CreateWorkLineInput {
   workTypeId: string;
+  technicianId?: string;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
@@ -223,6 +274,7 @@ export interface DeleteWorkRequest {
 export interface SearchWorksFilters {
   doctorId?: string;
   patientName?: string;
+  technicianId?: string;
   technician1Id?: string;
   technician2Id?: string;
   technician3Id?: string;
@@ -260,6 +312,8 @@ export interface TechnicianSalaryReportLine {
   patientName: string;
   doctorName: string;
   workSummary: string;
+  /** Detaliu linie (tip + cantitate) — util când o lucrare are mai mulți tehnicieni */
+  lineDetail: string;
   amount: number;
 }
 
@@ -268,6 +322,15 @@ export interface TechnicianSalaryReport {
   month: string;
   lines: TechnicianSalaryReportLine[];
   totalAmount: number;
+}
+
+export interface SaveReportPdfRequest {
+  suggestedFileName: string;
+}
+
+export interface SaveReportPdfResponse {
+  saved: boolean;
+  path: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,10 +396,15 @@ export const IPC_CHANNELS = {
   DOCTORS_CREATE: "doctors:create",
   DOCTORS_UPDATE: "doctors:update",
   DOCTORS_DELETE: "doctors:delete",
+  DOCTORS_GET_RATES: "doctors:get-rates",
+  DOCTORS_SAVE_RATES: "doctors:save-rates",
   TECHNICIANS_LIST: "technicians:list",
   TECHNICIANS_CREATE: "technicians:create",
   TECHNICIANS_UPDATE: "technicians:update",
   TECHNICIANS_DELETE: "technicians:delete",
+  TECHNICIANS_GET_RATES: "technicians:get-rates",
+  TECHNICIANS_SAVE_RATES: "technicians:save-rates",
+  RATES_LOOKUP_LINE_PRICES: "rates:lookup-line-prices",
   WORK_TYPES_LIST: "work-types:list",
   WORK_TYPES_CREATE: "work-types:create",
   WORK_TYPES_UPDATE: "work-types:update",
@@ -350,6 +418,7 @@ export const IPC_CHANNELS = {
   WORKS_DELETE: "works:delete",
   REPORTS_DOCTOR_UNPAID: "reports:doctor-unpaid",
   REPORTS_TECHNICIAN_SALARY: "reports:technician-salary",
+  EXPORT_SAVE_REPORT_PDF: "export:save-report-pdf",
   BACKUP_LIST: "backup:list",
   BACKUP_CREATE: "backup:create",
   BACKUP_RESTORE: "backup:restore",
@@ -379,12 +448,19 @@ export interface LabManagerApi {
     create: (payload: CreateDoctorRequest) => Promise<IpcResult<DoctorDto>>;
     update: (payload: UpdateDoctorRequest) => Promise<IpcResult<DoctorDto>>;
     delete: (payload: DeleteDoctorRequest) => Promise<IpcResult<void>>;
+    getRates: (payload: GetDoctorRatesRequest) => Promise<IpcResult<DoctorRateRow[]>>;
+    saveRates: (payload: SaveDoctorRatesRequest) => Promise<IpcResult<void>>;
   };
   technicians: {
     list: () => Promise<IpcResult<TechnicianDto[]>>;
     create: (payload: CreateTechnicianRequest) => Promise<IpcResult<TechnicianDto>>;
     update: (payload: UpdateTechnicianRequest) => Promise<IpcResult<TechnicianDto>>;
     delete: (payload: DeleteTechnicianRequest) => Promise<IpcResult<void>>;
+    getRates: (payload: GetTechnicianRatesRequest) => Promise<IpcResult<TechnicianRatesGrid>>;
+    saveRates: (payload: SaveTechnicianRatesRequest) => Promise<IpcResult<void>>;
+  };
+  rates: {
+    lookupLinePrices: (payload: LookupLinePricesRequest) => Promise<IpcResult<LookupLinePricesResponse>>;
   };
   workTypes: {
     list: () => Promise<IpcResult<WorkTypeDto[]>>;
@@ -404,6 +480,9 @@ export interface LabManagerApi {
   reports: {
     getDoctorUnpaid: (payload: MonthReportRequest) => Promise<IpcResult<DoctorUnpaidReport>>;
     getTechnicianSalary: (payload: MonthReportRequest) => Promise<IpcResult<TechnicianSalaryReport>>;
+  };
+  export: {
+    saveReportPdf: (payload: SaveReportPdfRequest) => Promise<IpcResult<SaveReportPdfResponse>>;
   };
   backup: {
     list: () => Promise<IpcResult<BackupRecordDto[]>>;

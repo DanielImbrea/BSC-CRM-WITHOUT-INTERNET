@@ -51,3 +51,28 @@ export function registerIpcHandler<TRequest, TResponse>(
     },
   );
 }
+
+export function registerIpcHandlerWithEvent<TRequest, TResponse>(
+  channel: string,
+  handler: (payload: TRequest, event: IpcMainInvokeEvent) => Promise<TResponse>,
+): void {
+  ipcMain.handle(
+    channel,
+    async (event: IpcMainInvokeEvent, payload: TRequest): Promise<IpcResult<TResponse>> => {
+      try {
+        const data = await handler(payload, event);
+        return { ok: true, data };
+      } catch (error) {
+        if (error instanceof AppError) {
+          logger.warn(`[${channel}] ${error.code}: ${error.message}`);
+          return { ok: false, error: error.message };
+        }
+        logger.error(`[${channel}] Eroare neașteptată:`, error);
+        return {
+          ok: false,
+          error: mapUnexpectedError(error),
+        };
+      }
+    },
+  );
+}

@@ -7,6 +7,8 @@ import { registerWorksHandlers } from "./features/works/ipc/works-handlers";
 import { registerReportsHandlers } from "./features/reports/ipc/reports-handlers";
 import { registerBackupHandlers } from "./features/backup/ipc/backup-handlers";
 import { registerSettingsHandlers } from "./features/settings/ipc/settings-handlers";
+import { registerRatesHandlers } from "./features/rates/ipc/rates-handlers";
+import { registerExportHandlers } from "./features/export/ipc/export-handlers";
 
 export function registerAllIpcHandlers(): void {
   registerAuthHandlers();
@@ -18,4 +20,6 @@ export function registerAllIpcHandlers(): void {
   registerReportsHandlers();
   registerBackupHandlers();
   registerSettingsHandlers();
+  registerRatesHandlers();
+  registerExportHandlers();
 }

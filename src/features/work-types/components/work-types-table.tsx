@@ -1,6 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { formatRon } from "@/shared/lib/format";
 import type { WorkTypeDto } from "@shared-types/ipc";
 
 interface WorkTypesTableProps {
@@ -25,8 +24,6 @@ export function WorkTypesTable({ workTypes, onEdit, onDelete }: WorkTypesTablePr
         <thead>
           <tr className="border-b border-border bg-card text-left text-xs text-muted-foreground">
             <th className="px-4 py-3 font-medium">Nume</th>
-            <th className="px-4 py-3 font-medium">Preț doctor</th>
-            <th className="px-4 py-3 font-medium">Preț tehnician</th>
             <th className="px-4 py-3 font-medium text-right">Acțiuni</th>
           </tr>
         </thead>
@@ -34,8 +31,6 @@ export function WorkTypesTable({ workTypes, onEdit, onDelete }: WorkTypesTablePr
           {workTypes.map((workType) => (
             <tr key={workType.id} className="border-b border-border last:border-0 hover:bg-accent/40">
               <td className="px-4 py-3 font-medium text-foreground">{workType.name}</td>
-              <td className="px-4 py-3 text-muted-foreground">{formatRon(workType.doctorPrice)}</td>
-              <td className="px-4 py-3 text-muted-foreground">{formatRon(workType.technicianPrice)}</td>
               <td className="px-4 py-3">
                 <div className="flex justify-end gap-1">
                   <Button variant="ghost" size="icon" onClick={() => onEdit(workType)} aria-label="Editează">

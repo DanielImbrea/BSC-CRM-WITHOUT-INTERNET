@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Printer, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -15,6 +15,11 @@ import { formatDate, formatRon } from "@/shared/lib/format";
 import { useTechnicians } from "@/features/technicians/hooks/use-technicians";
 import { useUpdateWorkPaymentStatus } from "@/features/works/hooks/use-work-mutations";
 import { useTechnicianSalaryReport } from "../hooks/use-reports";
+import { ReportExportButtons } from "./report-export-buttons";
+import { ReportPrintLayout } from "./report-print-layout";
+import { ReportPrintTable, ReportPrintTd, ReportPrintTh } from "./report-print-table";
+import { buildReportPdfFileName } from "../lib/report-file-name";
+import { formatReportMonthLabel } from "../lib/report-month-label";
 import type { TechnicianSalaryReport } from "@shared-types/ipc";
 
 export function TechnicianSalaryTab() {
@@ -33,10 +38,6 @@ export function TechnicianSalaryTab() {
     if (!technicianId) return;
     const data = await reportMutation.mutateAsync({ technicianId, month });
     setReport(data);
-  }
-
-  function handlePrint() {
-    window.print();
   }
 
   async function handleMarkAllPaidToTechnician() {
@@ -102,7 +103,9 @@ export function TechnicianSalaryTab() {
 
       {report && (
         <div className="flex flex-col gap-4">
-          <div className="flex justify-end gap-2 print:hidden">
+          <ReportExportButtons
+            pdfFileName={buildReportPdfFileName("raport-salariu", report.technicianName, report.month)}
+          >
             {report.lines.length > 0 && (
               <Button
                 variant="secondary"
@@ -114,56 +117,60 @@ export function TechnicianSalaryTab() {
                 {markingPaid ? "Se marchează..." : "Marchează ca plătite tehnicianului"}
               </Button>
             )}
-            <Button variant="outline" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" />
-              Tipărește
-            </Button>
-          </div>
+          </ReportExportButtons>
 
           <p className="text-xs text-muted-foreground print:hidden">
             După ce ai tipărit foaia și i-ai dat banii tehnicianului, apasă butonul de mai sus ca
             lucrările să nu mai apară la următorul raport.
           </p>
 
-          <div id="technician-salary-report" className="rounded-lg border border-border bg-card p-6 print:border-0 print:p-0">
-            <h2 className="mb-1 text-lg font-semibold text-foreground">{report.technicianName}</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Salariu tehnician — {report.month}
-            </p>
-
-            {report.lines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nicio lucrare în această lună.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Data</th>
-                    <th className="py-2 pr-4 font-medium">Pacient</th>
-                    <th className="py-2 pr-4 font-medium">Doctor</th>
-                    <th className="py-2 pr-4 font-medium">Lucrări</th>
-                    <th className="py-2 font-medium text-right">Sumă</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.lines.map((line) => (
-                    <tr key={line.workId} className="border-b border-border last:border-0">
-                      <td className="py-2 pr-4 text-muted-foreground">{formatDate(line.entryDate)}</td>
-                      <td className="py-2 pr-4">{line.patientName}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{line.doctorName}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{line.workSummary}</td>
-                      <td className="py-2 text-right">{formatRon(line.amount)}</td>
-                    </tr>
-                  ))}
-                  <tr className="font-semibold">
-                    <td colSpan={4} className="py-3 pr-4 text-right">
-                      Total
-                    </td>
-                    <td className="py-3 text-right">{formatRon(report.totalAmount)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
-          </div>
+          <ReportPrintLayout
+            id="technician-salary-report"
+            personName={report.technicianName}
+            reportTitle={`Salariu tehnician — ${formatReportMonthLabel(report.month)}`}
+          >
+            <ReportPrintTable
+              isEmpty={report.lines.length === 0}
+              emptyMessage="Nicio lucrare în această lună."
+              columns={
+                <>
+                  <ReportPrintTh narrow align="center">
+                    {" "}
+                  </ReportPrintTh>
+                  <ReportPrintTh>Doctor</ReportPrintTh>
+                  <ReportPrintTh>Data intrare</ReportPrintTh>
+                  <ReportPrintTh>Pacient</ReportPrintTh>
+                  <ReportPrintTh>Lucrări</ReportPrintTh>
+                  <ReportPrintTh align="right">Sumă</ReportPrintTh>
+                </>
+              }
+              totalLabel={
+                report.lines.length > 0 ? (
+                  <ReportPrintTd colSpan={5} align="right">
+                    Total
+                  </ReportPrintTd>
+                ) : undefined
+              }
+              totalValue={
+                report.lines.length > 0 ? (
+                  <ReportPrintTd align="right">{formatRon(report.totalAmount)}</ReportPrintTd>
+                ) : undefined
+              }
+            >
+              {report.lines.map((line, index) => (
+                <tr key={`${line.workId}-${line.lineDetail}-${index}`}>
+                  <ReportPrintTd narrow align="center" muted>
+                    {index + 1}
+                  </ReportPrintTd>
+                  <ReportPrintTd>{line.doctorName}</ReportPrintTd>
+                  <ReportPrintTd muted>{formatDate(line.entryDate)}</ReportPrintTd>
+                  <ReportPrintTd>{line.patientName}</ReportPrintTd>
+                  <ReportPrintTd muted>{line.lineDetail || line.workSummary}</ReportPrintTd>
+                  <ReportPrintTd align="right">{formatRon(line.amount)}</ReportPrintTd>
+                </tr>
+              ))}
+            </ReportPrintTable>
+          </ReportPrintLayout>
         </div>
       )}
     </div>

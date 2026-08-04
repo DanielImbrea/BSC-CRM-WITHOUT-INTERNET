@@ -3,6 +3,7 @@ import { ValidationError } from "../../../shared/errors";
 
 export interface WorkLineInput {
   workTypeId: string;
+  technicianId?: string;
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
