@@ -18,6 +18,20 @@ function getBackupsDir(): string {
   return dir;
 }
 
+function removeSqliteSidecars(dbPath: string): void {
+  for (const suffix of ["-wal", "-shm"]) {
+    const candidate = `${dbPath}${suffix}`;
+    if (fs.existsSync(candidate)) {
+      fs.unlinkSync(candidate);
+    }
+  }
+}
+
+type BackupInternalOptions = {
+  /** Used by auto-backup on app quit when session may already be cleared. */
+  skipAuth?: boolean;
+};
+
 export async function listBackups(): Promise<BackupRecordRow[]> {
   requireAuthenticated();
   return backupRepository.findAll();
@@ -28,8 +42,13 @@ export async function listBackups(): Promise<BackupRecordRow[]> {
  * de aplicație (userData/backups). Nu e o acțiune "critică" în sensul
  * politicii de audit (doar restaurările sunt) — nu se loghează.
  */
-export async function createBackup(type: "MANUAL" | "AUTO" = "MANUAL"): Promise<BackupRecordRow> {
-  requireAuthenticated();
+export async function createBackup(
+  type: "MANUAL" | "AUTO" = "MANUAL",
+  options?: BackupInternalOptions,
+): Promise<BackupRecordRow> {
+  if (!options?.skipAuth) {
+    requireAuthenticated();
+  }
 
   const dbPath = getDatabaseFilePath();
   if (!fs.existsSync(dbPath)) {
@@ -39,7 +58,13 @@ export async function createBackup(type: "MANUAL" | "AUTO" = "MANUAL"): Promise<
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupFilePath = path.join(getBackupsDir(), `backup-${timestamp}.db`);
 
-  fs.copyFileSync(dbPath, backupFilePath);
+  await disconnectPrisma();
+  try {
+    fs.copyFileSync(dbPath, backupFilePath);
+  } finally {
+    getPrismaClient();
+  }
+
   const { size } = fs.statSync(backupFilePath);
 
   return backupRepository.create(backupFilePath, size, type);
@@ -98,6 +123,7 @@ async function performRestore(sourcePath: string): Promise<void> {
   const dbPath = getDatabaseFilePath();
   await disconnectPrisma();
   try {
+    removeSqliteSidecars(dbPath);
     fs.copyFileSync(sourcePath, dbPath);
   } finally {
     // Reconectăm mereu, chiar dacă restaurarea a eșuat — aplicația nu
@@ -123,8 +149,10 @@ export async function exportBackupTo(backupId: string, destinationPath: string):
   fs.copyFileSync(record.filePath, destinationPath);
 }
 
-export async function deleteBackup(id: string): Promise<void> {
-  requireAuthenticated();
+export async function deleteBackup(id: string, options?: BackupInternalOptions): Promise<void> {
+  if (!options?.skipAuth) {
+    requireAuthenticated();
+  }
   const existing = await backupRepository.findById(id);
   if (!existing) {
     throw new NotFoundError("BackupRecord", id);
@@ -155,10 +183,13 @@ export async function deleteBackup(id: string): Promise<void> {
  * restul (fișier + înregistrare, cu audit, prin deleteBackup existent).
  * Apelată după fiecare backup automat, conform setării din modulul Setări.
  */
-export async function pruneOldBackups(maxRetained: number): Promise<void> {
+export async function pruneOldBackups(
+  maxRetained: number,
+  options?: BackupInternalOptions,
+): Promise<void> {
   const all = await backupRepository.findAll();
   const excess = all.slice(maxRetained); // findAll e deja sortat descrescător după dată
   for (const backup of excess) {
-    await deleteBackup(backup.id);
+    await deleteBackup(backup.id, options);
   }
 }

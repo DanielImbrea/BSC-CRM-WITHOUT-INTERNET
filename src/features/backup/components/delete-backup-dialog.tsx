@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,12 @@ interface DeleteBackupDialogProps {
 
 export function DeleteBackupDialog({ backup, onOpenChange }: DeleteBackupDialogProps) {
   const deleteBackup = useDeleteBackup();
+
+  React.useEffect(() => {
+    if (backup) {
+      deleteBackup.reset();
+    }
+  }, [backup, deleteBackup]);
 
   async function handleConfirm() {
     if (!backup) return;

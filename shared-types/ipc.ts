@@ -467,11 +467,13 @@ export interface ExportBackupRequest {
 }
 
 export interface ExportBackupResponse {
-  savedPath: string;
+  exported: boolean;
+  savedPath: string | null;
 }
 
 export interface ImportAndRestoreResponse {
-  restoredFrom: string;
+  /** Set when a file was selected and restore completed; absent when the dialog was cancelled. */
+  restoredFrom?: string;
 }
 
 export interface AppSettingsDto {

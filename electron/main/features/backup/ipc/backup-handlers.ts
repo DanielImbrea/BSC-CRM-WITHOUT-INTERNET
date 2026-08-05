@@ -50,10 +50,10 @@ export function registerBackupHandlers(): void {
         filters: [{ name: "Bază de date", extensions: ["db"] }],
       });
       if (result.canceled || !result.filePath) {
-        return { exported: false, path: null };
+        return { exported: false, savedPath: null };
       }
       await backupUseCases.exportBackupTo(payload.id, result.filePath);
-      return { exported: true, path: result.filePath };
+      return { exported: true, savedPath: result.filePath };
     },
   );
 
@@ -66,10 +66,11 @@ export function registerBackupHandlers(): void {
         filters: [{ name: "Bază de date", extensions: ["db"] }],
       });
       if (result.canceled || result.filePaths.length === 0) {
-        return { restored: false };
+        return {};
       }
-      await backupUseCases.importAndRestore(result.filePaths[0]);
-      return { restored: true };
+      const sourcePath = result.filePaths[0];
+      await backupUseCases.importAndRestore(sourcePath);
+      return { restoredFrom: sourcePath };
     },
   );
 }

@@ -15,19 +15,24 @@ import type { BackupRecordDto } from "@shared-types/ipc";
 interface RestoreBackupDialogProps {
   backup: BackupRecordDto | null;
   onOpenChange: (open: boolean) => void;
+  onRestored?: (backup: BackupRecordDto) => void;
 }
 
-export function RestoreBackupDialog({ backup, onOpenChange }: RestoreBackupDialogProps) {
+export function RestoreBackupDialog({ backup, onOpenChange, onRestored }: RestoreBackupDialogProps) {
   const restoreBackup = useRestoreBackup();
   const [confirmText, setConfirmText] = React.useState("");
 
   React.useEffect(() => {
-    if (!backup) setConfirmText("");
-  }, [backup]);
+    if (backup) {
+      restoreBackup.reset();
+      setConfirmText("");
+    }
+  }, [backup, restoreBackup]);
 
   async function handleConfirm() {
     if (!backup) return;
     await restoreBackup.mutateAsync(backup.id);
+    onRestored?.(backup);
     onOpenChange(false);
   }
 

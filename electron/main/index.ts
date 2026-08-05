@@ -132,8 +132,8 @@ async function performAutoBackupIfEnabled(): Promise<void> {
     const settings = await getAutoBackupSettingsUnsafe();
     if (!settings.autoBackupEnabled) return;
 
-    await createBackup("AUTO");
-    await pruneOldBackups(settings.maxBackupsRetained);
+    await createBackup("AUTO", { skipAuth: true });
+    await pruneOldBackups(settings.maxBackupsRetained, { skipAuth: true });
     logger.info("Backup automat creat la închiderea aplicației.");
   } catch (error) {
     logger.warn("Backup automat eșuat la închidere:", error);
