@@ -3,6 +3,7 @@ import path from "node:path";
 import { app } from "electron";
 import type { PrismaClient } from "prisma-client";
 import { getPrismaClient, resetDatabaseFile } from "./db";
+import { applySchemaPatches, validateRequiredColumns } from "./schema-patches";
 import { logger } from "./logger";
 
 /** Tabele obligatorii din schema curentă — verificare completă, nu doar AppAuth. */
@@ -97,37 +98,45 @@ export async function ensureDatabaseSchema(db: PrismaClient): Promise<PrismaClie
   let activeDb = db;
 
   const initial = await validateFullSchema(activeDb);
-  if (initial.ok) {
-    return activeDb;
+  if (!initial.ok) {
+    const legacy = await hasLegacySchema(activeDb);
+    const hasAnyTable = (await getExistingTables(activeDb)).size > 0;
+
+    if (legacy) {
+      logger.warn("Schema înveche detectată — resetez baza pentru schema CRM dentar.");
+      activeDb = await resetAndReconnect();
+    } else if (hasAnyTable) {
+      logger.warn(
+        `Bază parțial inițializată (lipsesc: ${initial.missing.join(", ")}) — resetez fișierul .db.`,
+      );
+      activeDb = await resetAndReconnect();
+    }
+
+    logger.warn("Schema incompletă — aplic bootstrap SQL.");
+    try {
+      await applyBootstrapSchema(activeDb);
+    } catch (error) {
+      logger.error("Bootstrap eșuat — reîncerc după reset complet:", error);
+      activeDb = await resetAndReconnect();
+      await applyBootstrapSchema(activeDb);
+    }
+
+    const final = await validateFullSchema(activeDb);
+    if (!final.ok) {
+      throw new Error(
+        `Baza de date nu a putut fi inițializată (lipsesc: ${final.missing.join(", ")}). ` +
+          "Șterge folderul database din AppData și repornește aplicația.",
+      );
+    }
   }
 
-  const legacy = await hasLegacySchema(activeDb);
-  const hasAnyTable = (await getExistingTables(activeDb)).size > 0;
+  await applySchemaPatches(activeDb);
 
-  if (legacy) {
-    logger.warn("Schema înveche detectată — resetez baza pentru schema CRM dentar.");
-    activeDb = await resetAndReconnect();
-  } else if (hasAnyTable) {
-    logger.warn(
-      `Bază parțial inițializată (lipsesc: ${initial.missing.join(", ")}) — resetez fișierul .db.`,
-    );
-    activeDb = await resetAndReconnect();
-  }
-
-  logger.warn("Schema incompletă — aplic bootstrap SQL.");
-  try {
-    await applyBootstrapSchema(activeDb);
-  } catch (error) {
-    logger.error("Bootstrap eșuat — reîncerc după reset complet:", error);
-    activeDb = await resetAndReconnect();
-    await applyBootstrapSchema(activeDb);
-  }
-
-  const final = await validateFullSchema(activeDb);
-  if (!final.ok) {
+  const columns = await validateRequiredColumns(activeDb);
+  if (!columns.ok) {
     throw new Error(
-      `Baza de date nu a putut fi inițializată (lipsesc: ${final.missing.join(", ")}). ` +
-        "Șterge folderul database din AppData și repornește aplicația.",
+      `Baza de date nu a putut fi actualizată (lipsesc: ${columns.missing.join(", ")}). ` +
+        "Reinstalează ultima versiune sau repornește aplicația.",
     );
   }
 

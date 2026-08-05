@@ -55,13 +55,17 @@ CREATE TABLE "WorkLine" (
     "workId" TEXT NOT NULL,
     "workTypeId" TEXT NOT NULL,
     "technicianId" TEXT,
+    "technician2Id" TEXT,
+    "technician3Id" TEXT,
     "quantity" INTEGER NOT NULL,
     "doctorUnitPrice" INTEGER NOT NULL,
     "technicianUnitPrice" INTEGER NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "WorkLine_workId_fkey" FOREIGN KEY ("workId") REFERENCES "Work" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "WorkLine_workTypeId_fkey" FOREIGN KEY ("workTypeId") REFERENCES "WorkType" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "WorkLine_technicianId_fkey" FOREIGN KEY ("technicianId") REFERENCES "Technician" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "WorkLine_technicianId_fkey" FOREIGN KEY ("technicianId") REFERENCES "Technician" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "WorkLine_technician2Id_fkey" FOREIGN KEY ("technician2Id") REFERENCES "Technician" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "WorkLine_technician3Id_fkey" FOREIGN KEY ("technician3Id") REFERENCES "Technician" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE "Setting" (
@@ -99,6 +103,8 @@ CREATE INDEX "Work_patientName_idx" ON "Work"("patientName");
 CREATE INDEX "WorkLine_workId_idx" ON "WorkLine"("workId");
 CREATE INDEX "WorkLine_workTypeId_idx" ON "WorkLine"("workTypeId");
 CREATE INDEX "WorkLine_technicianId_idx" ON "WorkLine"("technicianId");
+CREATE INDEX "WorkLine_technician2Id_idx" ON "WorkLine"("technician2Id");
+CREATE INDEX "WorkLine_technician3Id_idx" ON "WorkLine"("technician3Id");
 CREATE INDEX "AuditLog_entityType_entityId_idx" ON "AuditLog"("entityType", "entityId");
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
 

@@ -9,6 +9,9 @@ function mapUnexpectedError(error: unknown): string {
     if (error.code === "P2021") {
       return "Schema bazei de date este incompletă sau învechită. Repornește aplicația sau reinstalează ultima versiune.";
     }
+    if (error.code === "P2022") {
+      return "Baza de date trebuie actualizată. Închide aplicația, instalează ultima versiune și repornește-o o dată.";
+    }
     logger.error("Eroare Prisma:", error.code, error.message);
     return `Eroare bază de date (${error.code}). Repornește aplicația.`;
   }
