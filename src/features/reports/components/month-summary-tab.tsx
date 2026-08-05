@@ -35,18 +35,18 @@ export function MonthSummaryTab() {
   const [report, setReport] = React.useState<MonthSummaryReport | null>(null);
 
   async function handleGenerate() {
-    const data = await reportMutation.mutateAsync({ month });
+    const data = await reportMutation.mutateAsync({ month: month || undefined });
     setReport(data);
   }
 
-  const monthLabel = formatReportMonthLabel(month);
+  const monthLabel = formatReportMonthLabel(month || undefined);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-5 print:hidden">
         <div className="flex min-w-[180px] flex-col gap-1.5">
-          <Label>Luna</Label>
-          <MonthPicker value={month} onChange={setMonth} />
+          <Label>Perioadă</Label>
+          <MonthPicker allowAll value={month} onChange={setMonth} />
         </div>
         <Button onClick={() => void handleGenerate()} disabled={reportMutation.isPending}>
           {reportMutation.isPending ? "Se generează..." : "Generează"}
@@ -54,8 +54,8 @@ export function MonthSummaryTab() {
       </div>
 
       <p className="text-sm text-muted-foreground print:hidden">
-        Rezumat intern la sfârșit de lună: cât ai încasat de la doctori și cât ai achitat tehnicienilor
-        pentru lucrările din luna selectată (după data intrării).
+        Rezumat intern: cât ai încasat de la doctori și cât ai achitat tehnicienilor pentru lucrările
+        din perioada selectată (sau tot istoricul, dacă alegi „Toate perioadele”).
       </p>
 
       {reportMutation.error && (

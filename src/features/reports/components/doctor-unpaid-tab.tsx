@@ -11,28 +11,38 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { formatDate, formatRon } from "@/shared/lib/format";
+import { PaymentStatusSelect } from "@/features/works/components/payment-status-select";
 import { useDoctors } from "@/features/doctors/hooks/use-doctors";
 import { useDoctorUnpaidReport } from "../hooks/use-reports";
 import { ReportExportButtons } from "./report-export-buttons";
 import { ReportPrintLayout } from "./report-print-layout";
 import { ReportPrintTable, ReportPrintTd, ReportPrintTh } from "./report-print-table";
 import { buildReportPdfFileName } from "../lib/report-file-name";
-import { formatReportMonthLabel } from "../lib/report-month-label";
-import type { DoctorUnpaidReport } from "@shared-types/ipc";
+import { buildDoctorReportTitle } from "../lib/report-month-label";
+import type { DoctorUnpaidReport, PaymentStatus } from "@shared-types/ipc";
 
 export function DoctorUnpaidTab() {
   const { data: doctors = [] } = useDoctors();
   const reportMutation = useDoctorUnpaidReport();
 
   const [doctorId, setDoctorId] = React.useState("");
+  const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus | "">("NEPLATITA");
   const [month, setMonth] = React.useState(format(new Date(), "yyyy-MM"));
   const [report, setReport] = React.useState<DoctorUnpaidReport | null>(null);
 
   async function handleGenerate() {
     if (!doctorId) return;
-    const data = await reportMutation.mutateAsync({ doctorId, month });
+    const data = await reportMutation.mutateAsync({
+      doctorId,
+      month: month || undefined,
+      paymentStatus: paymentStatus || undefined,
+    });
     setReport(data);
   }
+
+  const reportTitle = report
+    ? buildDoctorReportTitle(report.month, report.paymentStatus)
+    : buildDoctorReportTitle(month, paymentStatus || undefined);
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,8 +63,17 @@ export function DoctorUnpaidTab() {
           </Select>
         </div>
         <div className="flex min-w-[180px] flex-col gap-1.5">
-          <Label>Luna</Label>
-          <MonthPicker value={month} onChange={setMonth} />
+          <Label>Status plată</Label>
+          <PaymentStatusSelect
+            value={paymentStatus}
+            onChange={setPaymentStatus}
+            allowAll
+            placeholder="Toate"
+          />
+        </div>
+        <div className="flex min-w-[180px] flex-col gap-1.5">
+          <Label>Perioadă</Label>
+          <MonthPicker allowAll value={month} onChange={setMonth} />
         </div>
         <Button onClick={() => void handleGenerate()} disabled={!doctorId || reportMutation.isPending}>
           {reportMutation.isPending ? "Se generează..." : "Generează"}
@@ -70,17 +89,21 @@ export function DoctorUnpaidTab() {
       {report && (
         <div className="flex flex-col gap-4">
           <ReportExportButtons
-            pdfFileName={buildReportPdfFileName("raport-neplatite", report.doctorName, report.month)}
+            pdfFileName={buildReportPdfFileName(
+              "raport-doctor",
+              report.doctorName,
+              report.month || "toate",
+            )}
           />
 
           <ReportPrintLayout
             id="doctor-unpaid-report"
             personName={report.doctorName}
-            reportTitle={`Lucrări neplătite — ${formatReportMonthLabel(report.month)}`}
+            reportTitle={reportTitle}
           >
             <ReportPrintTable
               isEmpty={report.lines.length === 0}
-              emptyMessage="Nicio lucrare neplătită în această lună."
+              emptyMessage="Nicio lucrare pentru criteriile selectate."
               columns={
                 <>
                   <ReportPrintTh narrow align="center">

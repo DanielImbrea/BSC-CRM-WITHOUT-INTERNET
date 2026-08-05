@@ -9,13 +9,13 @@ export function ReportsPage() {
       <div className="print:hidden">
         <h1 className="text-xl font-semibold text-foreground">Rapoarte</h1>
         <p className="text-sm text-muted-foreground">
-          Rapoarte pe lună: neplătite, salarii tehnicieni și rezumat financiar.
+          Rapoarte: lucrări pe doctor (status + perioadă), salarii tehnicieni și rezumat financiar.
         </p>
       </div>
 
       <Tabs defaultValue="doctor-unpaid">
         <TabsList className="print:hidden">
-          <TabsTrigger value="doctor-unpaid">Neplătite doctor</TabsTrigger>
+          <TabsTrigger value="doctor-unpaid">Lucrări doctor</TabsTrigger>
           <TabsTrigger value="technician-salary">Salariu tehnician</TabsTrigger>
           <TabsTrigger value="month-summary">Rezumat lună</TabsTrigger>
         </TabsList>

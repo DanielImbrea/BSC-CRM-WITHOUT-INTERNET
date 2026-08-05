@@ -367,9 +367,12 @@ export interface SearchWorksFilters {
 // Rapoarte
 // ---------------------------------------------------------------------------
 export interface MonthReportRequest {
-  month: string;
+  /** YYYY-MM — omit pentru toate perioadele */
+  month?: string;
   doctorId?: string;
   technicianId?: string;
+  /** Filtru status plată — omit pentru toate statusurile */
+  paymentStatus?: PaymentStatus;
 }
 
 export interface DoctorUnpaidReportLine {
@@ -383,6 +386,7 @@ export interface DoctorUnpaidReportLine {
 export interface DoctorUnpaidReport {
   doctorName: string;
   month: string;
+  paymentStatus?: PaymentStatus;
   lines: DoctorUnpaidReportLine[];
   totalAmount: number;
 }
@@ -415,7 +419,8 @@ export interface SaveReportPdfResponse {
 }
 
 export interface MonthSummaryRequest {
-  month: string;
+  /** YYYY-MM — omit pentru toate perioadele */
+  month?: string;
 }
 
 export interface MonthSummaryReport {

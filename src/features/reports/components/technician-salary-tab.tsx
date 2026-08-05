@@ -36,7 +36,10 @@ export function TechnicianSalaryTab() {
 
   async function handleGenerate() {
     if (!technicianId) return;
-    const data = await reportMutation.mutateAsync({ technicianId, month });
+    const data = await reportMutation.mutateAsync({
+      technicianId,
+      month: month || undefined,
+    });
     setReport(data);
   }
 
@@ -57,7 +60,10 @@ export function TechnicianSalaryTab() {
       }
       setReport(null);
       if (technicianId) {
-        const refreshed = await reportMutation.mutateAsync({ technicianId, month });
+        const refreshed = await reportMutation.mutateAsync({
+          technicianId,
+          month: month || undefined,
+        });
         setReport(refreshed);
       }
     } finally {
@@ -84,8 +90,8 @@ export function TechnicianSalaryTab() {
           </Select>
         </div>
         <div className="flex min-w-[180px] flex-col gap-1.5">
-          <Label>Luna</Label>
-          <MonthPicker value={month} onChange={setMonth} />
+          <Label>Perioadă</Label>
+          <MonthPicker allowAll value={month} onChange={setMonth} />
         </div>
         <Button
           onClick={() => void handleGenerate()}
@@ -131,7 +137,7 @@ export function TechnicianSalaryTab() {
           >
             <ReportPrintTable
               isEmpty={report.lines.length === 0}
-              emptyMessage="Nicio lucrare în această lună."
+              emptyMessage="Nicio lucrare pentru criteriile selectate."
               columns={
                 <>
                   <ReportPrintTh narrow align="center">

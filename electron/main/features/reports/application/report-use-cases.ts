@@ -1,4 +1,4 @@
-import type { MonthReportRequest } from "@shared-types/ipc";
+import type { MonthReportRequest, MonthSummaryRequest } from "@shared-types/ipc";
 import { getPrismaClient } from "../../../shared/db";
 import { doctorsRepository } from "../../doctors/infrastructure/doctors-repository";
 import { techniciansRepository } from "../../technicians/infrastructure/technicians-repository";
@@ -42,29 +42,27 @@ export async function getDoctorUnpaidReport(payload: MonthReportRequest) {
   const doctor = await doctorsRepository.findById(payload.doctorId);
   if (!doctor) throw new NotFoundError("Doctor", payload.doctorId);
 
-  const { from, to } = parseMonthRange(payload.month);
   const { items: works } = await worksRepository.search(
     {
       doctorId: payload.doctorId,
-      paymentStatus: "NEPLATITA",
-      month: payload.month,
+      ...(payload.paymentStatus ? { paymentStatus: payload.paymentStatus } : {}),
+      ...(payload.month ? { month: payload.month } : {}),
     },
     { unlimited: true },
   );
 
-  const lines = works
-    .filter((work) => work.entryDate >= from && work.entryDate <= to)
-    .map((work) => ({
-      workId: work.id,
-      entryDate: work.entryDate.toISOString(),
-      patientName: work.patientName,
-      workSummary: work.workSummary,
-      amount: work.doctorTotal,
-    }));
+  const lines = works.map((work) => ({
+    workId: work.id,
+    entryDate: work.entryDate.toISOString(),
+    patientName: work.patientName,
+    workSummary: work.workSummary,
+    amount: work.doctorTotal,
+  }));
 
   return {
     doctorName: doctor.name,
-    month: payload.month,
+    month: payload.month ?? "",
+    paymentStatus: payload.paymentStatus,
     lines,
     totalAmount: lines.reduce((sum, line) => sum + line.amount, 0),
   };
@@ -78,7 +76,7 @@ export async function getTechnicianSalaryReport(payload: MonthReportRequest) {
   const technician = await techniciansRepository.findById(payload.technicianId);
   if (!technician) throw new NotFoundError("Technician", payload.technicianId);
 
-  const { from, to } = parseMonthRange(payload.month);
+  const dateFilter = payload.month ? parseMonthRange(payload.month) : null;
   const db = getPrismaClient();
 
   const workLines = await db.workLine.findMany({
@@ -90,7 +88,9 @@ export async function getTechnicianSalaryReport(payload: MonthReportRequest) {
       ],
       work: {
         paymentStatus: "PLATITA_DOCTOR",
-        entryDate: { gte: from, lte: to },
+        ...(dateFilter
+          ? { entryDate: { gte: dateFilter.from, lte: dateFilter.to } }
+          : {}),
       },
     },
     include: {
@@ -118,24 +118,25 @@ export async function getTechnicianSalaryReport(payload: MonthReportRequest) {
 
   return {
     technicianName: technician.name,
-    month: payload.month,
+    month: payload.month ?? "",
     lines,
     totalAmount: lines.reduce((sum, line) => sum + line.amount, 0),
   };
 }
 
-export async function getMonthSummaryReport(payload: { month: string }) {
+export async function getMonthSummaryReport(payload: MonthSummaryRequest) {
   requireAuthenticated();
-  if (!payload.month) {
-    throw new ValidationError("Selectează luna pentru rezumat.");
-  }
 
-  const { from, to } = parseMonthRange(payload.month);
+  const dateFilter = payload.month ? parseMonthRange(payload.month) : null;
+  const entryDateFilter = dateFilter
+    ? { entryDate: { gte: dateFilter.from, lte: dateFilter.to } }
+    : {};
+
   const db = getPrismaClient();
 
   const works = await db.work.findMany({
     where: {
-      entryDate: { gte: from, lte: to },
+      ...entryDateFilter,
       paymentStatus: { in: ["PLATITA_DOCTOR", "PLATITA_TEHNICIAN"] },
     },
     include: { lines: true },
@@ -145,7 +146,7 @@ export async function getMonthSummaryReport(payload: { month: string }) {
 
   const technicianPaidWorks = await db.work.findMany({
     where: {
-      entryDate: { gte: from, lte: to },
+      ...entryDateFilter,
       paymentStatus: "PLATITA_TEHNICIAN",
     },
     include: { lines: true },
@@ -157,7 +158,7 @@ export async function getMonthSummaryReport(payload: { month: string }) {
   );
 
   return {
-    month: payload.month,
+    month: payload.month ?? "",
     doctorPaidTotal,
     doctorPaidWorksCount: works.length,
     technicianPaidTotal,
