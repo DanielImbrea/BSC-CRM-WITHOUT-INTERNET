@@ -4,99 +4,101 @@ import { format } from "date-fns";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { MonthPicker } from "@/shared/components/ui/date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import { FilterEntitySelect } from "@/shared/components/filter-entity-select";
+import { loadActiveTechnicianOptions } from "@/shared/lib/catalog-options";
 import { formatDate, formatRon } from "@/shared/lib/format";
-import { useTechnicians } from "@/features/technicians/hooks/use-technicians";
+import { PaymentStatusSelect } from "@/features/works/components/payment-status-select";
 import { useUpdateWorkPaymentStatus } from "@/features/works/hooks/use-work-mutations";
 import { useTechnicianSalaryReport } from "../hooks/use-reports";
 import { ReportExportButtons } from "./report-export-buttons";
 import { ReportPrintLayout } from "./report-print-layout";
 import { ReportPrintTable, ReportPrintTd, ReportPrintTh } from "./report-print-table";
 import { buildReportPdfFileName } from "../lib/report-file-name";
-import { formatReportMonthLabel } from "../lib/report-month-label";
-import type { TechnicianSalaryReport } from "@shared-types/ipc";
+import { buildTechnicianReportTitle } from "../lib/report-month-label";
+import type { PaymentStatus, TechnicianSalaryReport } from "@shared-types/ipc";
+
+const loadTechnicians = loadActiveTechnicianOptions;
 
 export function TechnicianSalaryTab() {
-  const { data: technicians = [] } = useTechnicians();
   const reportMutation = useTechnicianSalaryReport();
   const updatePaymentStatus = useUpdateWorkPaymentStatus();
 
   const [technicianId, setTechnicianId] = React.useState("");
+  const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus | "">("PLATITA_DOCTOR");
   const [month, setMonth] = React.useState(format(new Date(), "yyyy-MM"));
   const [report, setReport] = React.useState<TechnicianSalaryReport | null>(null);
   const [markingPaid, setMarkingPaid] = React.useState(false);
 
-  const activeTechnicians = technicians.filter((t) => t.active);
+  const showTechnicianColumn = !technicianId || report?.technicianName === "Toți tehnicienii";
 
   async function handleGenerate() {
-    if (!technicianId) return;
     const data = await reportMutation.mutateAsync({
-      technicianId,
+      technicianId: technicianId || undefined,
       month: month || undefined,
+      paymentStatus: paymentStatus || undefined,
     });
     setReport(data);
   }
 
   async function handleMarkAllPaidToTechnician() {
     if (!report || report.lines.length === 0) return;
+    const uniqueWorkIds = [...new Set(report.lines.map((line) => line.workId))];
     const confirmed = window.confirm(
-      `Marchezi ${report.lines.length} lucrări ca „Plătită tehnician”? Nu vor mai apărea la următorul raport de salariu.`,
+      `Marchezi ${uniqueWorkIds.length} lucrări ca „Plătită tehnician”? Nu vor mai apărea la următorul raport de salariu.`,
     );
     if (!confirmed) return;
 
     setMarkingPaid(true);
     try {
-      for (const line of report.lines) {
+      for (const workId of uniqueWorkIds) {
         await updatePaymentStatus.mutateAsync({
-          id: line.workId,
+          id: workId,
           paymentStatus: "PLATITA_TEHNICIAN",
         });
       }
       setReport(null);
-      if (technicianId) {
-        const refreshed = await reportMutation.mutateAsync({
-          technicianId,
-          month: month || undefined,
-        });
-        setReport(refreshed);
-      }
+      const refreshed = await reportMutation.mutateAsync({
+        technicianId: technicianId || undefined,
+        month: month || undefined,
+        paymentStatus: paymentStatus || undefined,
+      });
+      setReport(refreshed);
     } finally {
       setMarkingPaid(false);
     }
   }
 
+  const reportTitle = report
+    ? buildTechnicianReportTitle(report.month, report.paymentStatus)
+    : buildTechnicianReportTitle(month, paymentStatus || undefined);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-border bg-card p-5 print:hidden">
-        <div className="flex min-w-[200px] flex-col gap-1.5">
-          <Label>Tehnician *</Label>
-          <Select value={technicianId} onValueChange={setTechnicianId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selectează tehnician" />
-            </SelectTrigger>
-            <SelectContent>
-              {activeTechnicians.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <FilterEntitySelect
+          label="Tehnician"
+          value={technicianId}
+          onChange={setTechnicianId}
+          queryKey="technicians-report"
+          loadOptions={loadTechnicians}
+          placeholder="Toți"
+          allLabel="Toți tehnicienii"
+          searchPlaceholder="Caută tehnician..."
+        />
+        <div className="flex min-w-[180px] flex-col gap-1.5">
+          <Label>Status plată</Label>
+          <PaymentStatusSelect
+            value={paymentStatus}
+            onChange={setPaymentStatus}
+            allowAll
+            placeholder="Toate"
+          />
         </div>
         <div className="flex min-w-[180px] flex-col gap-1.5">
           <Label>Perioadă</Label>
           <MonthPicker allowAll value={month} onChange={setMonth} />
         </div>
-        <Button
-          onClick={() => void handleGenerate()}
-          disabled={!technicianId || reportMutation.isPending}
-        >
+        <Button onClick={() => void handleGenerate()} disabled={reportMutation.isPending}>
           {reportMutation.isPending ? "Se generează..." : "Generează"}
         </Button>
       </div>
@@ -112,7 +114,7 @@ export function TechnicianSalaryTab() {
           <ReportExportButtons
             pdfFileName={buildReportPdfFileName("raport-salariu", report.technicianName, report.month)}
           >
-            {report.lines.length > 0 && (
+            {report.lines.length > 0 && technicianId && paymentStatus === "PLATITA_DOCTOR" && (
               <Button
                 variant="secondary"
                 onClick={() => void handleMarkAllPaidToTechnician()}
@@ -133,7 +135,7 @@ export function TechnicianSalaryTab() {
           <ReportPrintLayout
             id="technician-salary-report"
             personName={report.technicianName}
-            reportTitle={`Salariu tehnician — ${formatReportMonthLabel(report.month)}`}
+            reportTitle={reportTitle}
           >
             <ReportPrintTable
               isEmpty={report.lines.length === 0}
@@ -143,6 +145,7 @@ export function TechnicianSalaryTab() {
                   <ReportPrintTh narrow align="center">
                     {" "}
                   </ReportPrintTh>
+                  {showTechnicianColumn && <ReportPrintTh>Tehnician</ReportPrintTh>}
                   <ReportPrintTh>Doctor</ReportPrintTh>
                   <ReportPrintTh className="print:hidden">Data intrare</ReportPrintTh>
                   <ReportPrintTh>Pacient</ReportPrintTh>
@@ -153,10 +156,18 @@ export function TechnicianSalaryTab() {
               totalLabel={
                 report.lines.length > 0 ? (
                   <>
-                    <ReportPrintTd colSpan={5} align="right" className="print:hidden">
+                    <ReportPrintTd
+                      colSpan={showTechnicianColumn ? 6 : 5}
+                      align="right"
+                      className="print:hidden"
+                    >
                       Total
                     </ReportPrintTd>
-                    <ReportPrintTd colSpan={4} align="right" className="hidden print:table-cell">
+                    <ReportPrintTd
+                      colSpan={showTechnicianColumn ? 5 : 4}
+                      align="right"
+                      className="hidden print:table-cell"
+                    >
                       Total
                     </ReportPrintTd>
                   </>
@@ -169,10 +180,11 @@ export function TechnicianSalaryTab() {
               }
             >
               {report.lines.map((line, index) => (
-                <tr key={`${line.workId}-${line.lineDetail}-${index}`}>
+                <tr key={`${line.workId}-${line.technicianName}-${line.lineDetail}-${index}`}>
                   <ReportPrintTd narrow align="center" muted>
                     {index + 1}
                   </ReportPrintTd>
+                  {showTechnicianColumn && <ReportPrintTd>{line.technicianName}</ReportPrintTd>}
                   <ReportPrintTd>{line.doctorName}</ReportPrintTd>
                   <ReportPrintTd className="print:hidden" muted>
                     {formatDate(line.entryDate)}

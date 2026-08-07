@@ -1,10 +1,11 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { MonthPicker } from "@/shared/components/ui/date-picker";
-import { useWorksList } from "../hooks/use-works";
+import { useWorksList, worksQueryKeys } from "../hooks/use-works";
 import { useUpdateWorkPaymentStatus } from "../hooks/use-work-mutations";
 import { WorksTable } from "../components/works-table";
 import { WorkFormDialog } from "../components/work-form-dialog";
@@ -14,6 +15,7 @@ import type { WorkListItem } from "@shared-types/ipc";
 const PAGE_SIZE = 50;
 
 export function WorksPage() {
+  const queryClient = useQueryClient();
   const [month, setMonth] = React.useState(format(new Date(), "yyyy-MM"));
   const [page, setPage] = React.useState(1);
   const { data, isLoading, isError, error } = useWorksList({ page, pageSize: PAGE_SIZE, month: month || undefined });
@@ -21,6 +23,11 @@ export function WorksPage() {
 
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingWorkId, setEditingWorkId] = React.useState<string | null>(null);
+  const [editingSeed, setEditingSeed] = React.useState<{
+    doctorId: string;
+    doctorName: string;
+    patientName: string;
+  } | null>(null);
   const [deletingWork, setDeletingWork] = React.useState<WorkListItem | null>(null);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -31,11 +38,17 @@ export function WorksPage() {
 
   function openCreateForm() {
     setEditingWorkId(null);
+    setEditingSeed(null);
     setFormOpen(true);
   }
 
   function openEditForm(work: WorkListItem) {
     setEditingWorkId(work.id);
+    setEditingSeed({
+      doctorId: work.doctorId,
+      doctorName: work.doctorName,
+      patientName: work.patientName,
+    });
     setFormOpen(true);
   }
 
@@ -79,6 +92,10 @@ export function WorksPage() {
         <>
           <WorksTable
             works={data.items}
+            inlineTechnicianEdit
+            onWorkUpdated={() => {
+              void queryClient.invalidateQueries({ queryKey: worksQueryKeys.all });
+            }}
             onEdit={openEditForm}
             onDelete={setDeletingWork}
             onPaymentStatusChange={(work, paymentStatus) => {
@@ -121,7 +138,13 @@ export function WorksPage() {
       )}
 
       {formOpen && (
-        <WorkFormDialog open={formOpen} onOpenChange={setFormOpen} workId={editingWorkId} />
+        <WorkFormDialog
+          key={editingWorkId ?? "new"}
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          workId={editingWorkId}
+          seed={editingSeed}
+        />
       )}
       <DeleteWorkDialog work={deletingWork} onOpenChange={() => setDeletingWork(null)} />
     </div>

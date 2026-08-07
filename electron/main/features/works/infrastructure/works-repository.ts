@@ -22,14 +22,18 @@ export interface WorkListRecord {
   id: string;
   entryDate: Date;
   patientName: string;
+  doctorId: string;
   doctorName: string;
   observations: string | null;
   paymentStatus: PaymentStatus;
   doctorTotal: number;
   technicianTotal: number;
   workSummary: string;
+  technician1Id: string | null;
   technician1Name: string | null;
+  technician2Id: string | null;
   technician2Name: string | null;
+  technician3Id: string | null;
   technician3Name: string | null;
 }
 
@@ -110,17 +114,30 @@ export function buildWorkSummary(lines: Pick<WorkLineRecord, "quantity" | "workT
 }
 
 function listTechnicianColumns(lines: WorkLineRecord[]): {
+  technician1Id: string | null;
   technician1Name: string | null;
+  technician2Id: string | null;
   technician2Name: string | null;
+  technician3Id: string | null;
   technician3Name: string | null;
 } {
   const primary = lines[0];
   if (!primary) {
-    return { technician1Name: null, technician2Name: null, technician3Name: null };
+    return {
+      technician1Id: null,
+      technician1Name: null,
+      technician2Id: null,
+      technician2Name: null,
+      technician3Id: null,
+      technician3Name: null,
+    };
   }
   const fromLine = {
+    technician1Id: primary.technicianId,
     technician1Name: primary.technicianName,
+    technician2Id: primary.technician2Id,
     technician2Name: primary.technician2Name,
+    technician3Id: primary.technician3Id,
     technician3Name: primary.technician3Name,
   };
   if (fromLine.technician1Name || fromLine.technician2Name || fromLine.technician3Name) {
@@ -128,8 +145,11 @@ function listTechnicianColumns(lines: WorkLineRecord[]): {
   }
   const fallback = uniqueTechnicianNames(lines);
   return {
+    technician1Id: primary.technicianId,
     technician1Name: fallback[0] ?? null,
+    technician2Id: primary.technician2Id,
     technician2Name: fallback[1] ?? null,
+    technician3Id: primary.technician3Id,
     technician3Name: fallback[2] ?? null,
   };
 }
@@ -141,6 +161,7 @@ function toListRecord(work: WorkWithRelations): WorkListRecord {
     id: work.id,
     entryDate: work.entryDate,
     patientName: work.patientName,
+    doctorId: work.doctorId,
     doctorName: work.doctor.name,
     observations: work.observations,
     paymentStatus: work.paymentStatus as PaymentStatus,

@@ -45,14 +45,18 @@ function toListItem(record: WorkListRecord): WorkListItem {
     id: record.id,
     entryDate: record.entryDate.toISOString(),
     patientName: record.patientName,
+    doctorId: record.doctorId,
     doctorName: record.doctorName,
     observations: record.observations,
     paymentStatus: record.paymentStatus,
     doctorTotal: record.doctorTotal,
     technicianTotal: record.technicianTotal,
     workSummary: record.workSummary,
+    technician1Id: record.technician1Id,
     technician1Name: record.technician1Name,
+    technician2Id: record.technician2Id,
     technician2Name: record.technician2Name,
+    technician3Id: record.technician3Id,
     technician3Name: record.technician3Name,
   };
 }

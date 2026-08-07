@@ -22,3 +22,10 @@ export function buildDoctorReportTitle(
 ): string {
   return `Lucrări — ${formatReportStatusLabel(paymentStatus)} — ${formatReportMonthLabel(month)}`;
 }
+
+export function buildTechnicianReportTitle(
+  month: string | undefined,
+  paymentStatus: PaymentStatus | undefined,
+): string {
+  return `Salariu tehnician — ${formatReportStatusLabel(paymentStatus)} — ${formatReportMonthLabel(month)}`;
+}

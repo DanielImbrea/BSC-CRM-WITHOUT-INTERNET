@@ -34,6 +34,21 @@ export interface SearchableEntitySelectProps {
   className?: string;
 }
 
+/** Asigură că valoarea selectată există în listă — Radix resetează selecția dacă lipsește. */
+function withSelectedOption(
+  options: EntityOption[],
+  value: string,
+  valueLabel: string | null | undefined,
+): EntityOption[] {
+  if (!value || options.some((option) => option.id === value)) {
+    return options;
+  }
+  if (valueLabel) {
+    return [{ id: value, label: valueLabel }, ...options];
+  }
+  return options;
+}
+
 export function SearchableEntitySelect({
   value,
   onChange,
@@ -55,25 +70,29 @@ export function SearchableEntitySelect({
   const { data: options = [], isLoading } = useQuery({
     queryKey: ["searchable-entity-select", queryKey],
     queryFn: loadOptions,
-    enabled: open,
+    // Preîncarcă dacă există valoare (edit) — evită reset Radix când lipsește SelectItem.
+    enabled: open || Boolean(value),
     staleTime: 5 * 60 * 1000,
   });
 
+  const catalogOptions = React.useMemo(
+    () => withSelectedOption(options, value, valueLabel),
+    [options, value, valueLabel],
+  );
+
   const visibleOptions = React.useMemo(() => {
-    const base = filterOptions ? filterOptions(options) : options;
+    const base = filterOptions ? filterOptions(catalogOptions) : catalogOptions;
     const term = search.trim().toLowerCase();
-    const filtered = term
-      ? base.filter((o) => o.label.toLowerCase().includes(term))
-      : base;
+    const filtered = term ? base.filter((o) => o.label.toLowerCase().includes(term)) : base;
     return filtered.slice(0, MAX_VISIBLE);
-  }, [options, filterOptions, search]);
+  }, [catalogOptions, filterOptions, search]);
 
   const selectedLabel = React.useMemo(() => {
     if (!value) return null;
-    return options.find((o) => o.id === value)?.label ?? valueLabel ?? null;
-  }, [value, options, valueLabel]);
+    return catalogOptions.find((o) => o.id === value)?.label ?? valueLabel ?? null;
+  }, [value, catalogOptions, valueLabel]);
 
-  const displayLabel = value ? selectedLabel ?? "Se încarcă..." : emptyLabel;
+  const displayLabel = value ? (selectedLabel ?? "Se încarcă...") : emptyLabel;
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -86,16 +105,18 @@ export function SearchableEntitySelect({
       onSelectOption?.(null);
       return;
     }
+    const option = catalogOptions.find((o) => o.id === next) ?? null;
     onChange(next);
-    const option = options.find((o) => o.id === next) ?? null;
     onSelectOption?.(option);
   }
+
+  const selectValue = value || (allowClear ? NONE : undefined);
 
   return (
     <Select
       open={open}
       onOpenChange={handleOpenChange}
-      value={value || (allowClear ? NONE : undefined)}
+      value={selectValue}
       onValueChange={handleValueChange}
       disabled={disabled}
     >
@@ -117,7 +138,7 @@ export function SearchableEntitySelect({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-1">
           {allowClear && <SelectItem value={NONE}>{clearLabel}</SelectItem>}
-          {isLoading && (
+          {isLoading && options.length === 0 && (
             <p className="px-2 py-1.5 text-xs text-muted-foreground">Se încarcă...</p>
           )}
           {!isLoading && visibleOptions.length === 0 && (

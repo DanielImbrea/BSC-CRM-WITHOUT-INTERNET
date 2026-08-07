@@ -60,6 +60,11 @@ export function WorkSearchPage() {
   const [resultsTruncated, setResultsTruncated] = React.useState(false);
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingWorkId, setEditingWorkId] = React.useState<string | null>(null);
+  const [editingSeed, setEditingSeed] = React.useState<{
+    doctorId: string;
+    doctorName: string;
+    patientName: string;
+  } | null>(null);
   const [deletingWork, setDeletingWork] = React.useState<WorkListItem | null>(null);
 
   const filterState = {
@@ -83,6 +88,11 @@ export function WorkSearchPage() {
 
   function openEditForm(work: WorkListItem) {
     setEditingWorkId(work.id);
+    setEditingSeed({
+      doctorId: work.doctorId,
+      doctorName: work.doctorName,
+      patientName: work.patientName,
+    });
     setFormOpen(true);
   }
 
@@ -215,6 +225,12 @@ export function WorkSearchPage() {
           </div>
           <WorksTable
             works={results}
+            inlineTechnicianEdit
+            onWorkUpdated={(updated) => {
+              setResults((current) =>
+                current?.map((row) => (row.id === updated.id ? updated : row)) ?? null,
+              );
+            }}
             onEdit={openEditForm}
             onDelete={setDeletingWork}
             onPaymentStatusChange={(work, status) => {
@@ -232,15 +248,18 @@ export function WorkSearchPage() {
 
       {formOpen && (
         <WorkFormDialog
+          key={editingWorkId ?? "new"}
           open={formOpen}
           onOpenChange={(open) => {
             setFormOpen(open);
             if (!open) {
               setEditingWorkId(null);
+              setEditingSeed(null);
               handleWorkSaved();
             }
           }}
           workId={editingWorkId}
+          seed={editingSeed}
         />
       )}
 

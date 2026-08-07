@@ -1,7 +1,6 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
-import { BrandLogo } from "@/shared/components/brand-logo";
 
 interface ReportPrintLayoutProps {
   id: string;
@@ -20,14 +19,6 @@ export function ReportPrintLayout({ id, personName, reportTitle, children }: Rep
     >
       <div className="report-print-sheet">
         <header className="report-print-header hidden">
-          <div className="report-print-letterhead">
-            <BrandLogo height={52} className="report-print-logo" />
-            <div className="report-print-letterhead-text">
-              <p className="report-print-brand-name">Billionaire Smile Club CRM</p>
-              <p className="report-print-brand-tag">Laborator dentar · Management financiar</p>
-            </div>
-          </div>
-
           <div className="report-print-title-card">
             <p className="report-print-doc-label">Raport</p>
             <h1>{personName}</h1>
@@ -43,7 +34,6 @@ export function ReportPrintLayout({ id, personName, reportTitle, children }: Rep
         <div className="report-print-body">{children}</div>
 
         <footer className="report-print-footer hidden">
-          <p className="report-print-footer-brand">Billionaire Smile Club CRM</p>
           <p>Generat la {generatedAt}</p>
         </footer>
       </div>

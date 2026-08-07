@@ -250,14 +250,18 @@ export interface WorkListItem {
   id: string;
   entryDate: string;
   patientName: string;
+  doctorId: string;
   doctorName: string;
   observations: string | null;
   paymentStatus: PaymentStatus;
   doctorTotal: number;
   technicianTotal: number;
   workSummary: string;
+  technician1Id: string | null;
   technician1Name: string | null;
+  technician2Id: string | null;
   technician2Name: string | null;
+  technician3Id: string | null;
   technician3Name: string | null;
 }
 
@@ -379,7 +383,14 @@ export interface DoctorUnpaidReportLine {
   workId: string;
   entryDate: string;
   patientName: string;
+  doctorName: string;
   workSummary: string;
+  amount: number;
+}
+
+export interface DoctorWorkTypeBreakdown {
+  workTypeName: string;
+  quantity: number;
   amount: number;
 }
 
@@ -389,6 +400,7 @@ export interface DoctorUnpaidReport {
   paymentStatus?: PaymentStatus;
   lines: DoctorUnpaidReportLine[];
   totalAmount: number;
+  workTypeBreakdown?: DoctorWorkTypeBreakdown[];
 }
 
 export interface TechnicianSalaryReportLine {
@@ -396,6 +408,7 @@ export interface TechnicianSalaryReportLine {
   entryDate: string;
   patientName: string;
   doctorName: string;
+  technicianName: string;
   workSummary: string;
   /** Detaliu linie (tip + cantitate) — util când o lucrare are mai mulți tehnicieni */
   lineDetail: string;
@@ -405,6 +418,7 @@ export interface TechnicianSalaryReportLine {
 export interface TechnicianSalaryReport {
   technicianName: string;
   month: string;
+  paymentStatus?: PaymentStatus;
   lines: TechnicianSalaryReportLine[];
   totalAmount: number;
 }

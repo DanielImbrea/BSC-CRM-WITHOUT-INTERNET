@@ -46,6 +46,12 @@ interface WorkFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workId?: string | null;
+  /** Valori din listă pentru afișare instantă înainte de fetch-ul complet. */
+  seed?: {
+    doctorId?: string;
+    doctorName?: string | null;
+    patientName?: string;
+  } | null;
 }
 
 function baniToInput(bani: number): string {
@@ -65,9 +71,9 @@ function emptyLine(): WorkLineForm {
   };
 }
 
-export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDialogProps) {
+export function WorkFormDialog({ open, onOpenChange, workId = null, seed = null }: WorkFormDialogProps) {
   const isEditMode = workId !== null;
-  const { data: existingWork } = useWork(isEditMode ? workId : null);
+  const { data: existingWork, isLoading: isLoadingWork, isFetching } = useWork(isEditMode ? workId : null);
   const createWork = useCreateWork();
   const updateWork = useUpdateWork();
 
@@ -81,6 +87,8 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
   const [formError, setFormError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    if (!open) return;
+
     if (open && isEditMode && existingWork) {
       setEntryDate(existingWork.entryDate.slice(0, 10));
       setDoctorId(existingWork.doctorId);
@@ -106,6 +114,10 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
             }))
           : [emptyLine()],
       );
+    } else if (open && isEditMode && seed && (isLoadingWork || isFetching) && !existingWork) {
+      setDoctorId(seed.doctorId ?? "");
+      setDoctorName(seed.doctorName ?? null);
+      setPatientName(seed.patientName ?? "");
     } else if (open && !isEditMode) {
       setEntryDate(format(new Date(), "yyyy-MM-dd"));
       setDoctorId("");
@@ -116,7 +128,7 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
       setLines([emptyLine()]);
     }
     setFormError(null);
-  }, [open, isEditMode, existingWork]);
+  }, [open, isEditMode, existingWork, isLoadingWork, isFetching, seed]);
 
   async function lookupAndApplyLinePrices(
     index: number,
@@ -147,24 +159,17 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
   }
 
-  function handleWorkTypeChange(index: number, workTypeId: string) {
-    updateLine(index, { workTypeId });
-    const line = lines[index];
-    void lookupAndApplyLinePrices(index, doctorId, workTypeId, line?.technicianId ?? "");
+  function applyLinePatch(index: number, patch: Partial<WorkLineForm>) {
+    updateLine(index, patch);
   }
 
-  async function handleDoctorChange(nextDoctorId: string) {
-    setDoctorId(nextDoctorId);
-    if (!nextDoctorId) {
-      setDoctorName(null);
-      return;
-    }
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.workTypeId) {
-        await lookupAndApplyLinePrices(i, nextDoctorId, line.workTypeId, line.technicianId);
-      }
-    }
+  function handleWorkTypeChange(index: number, workTypeId: string, workTypeName?: string) {
+    applyLinePatch(index, {
+      workTypeId,
+      workTypeName: workTypeId ? (workTypeName ?? lines[index]?.workTypeName) : undefined,
+    });
+    const line = lines[index];
+    void lookupAndApplyLinePrices(index, doctorId, workTypeId, line?.technicianId ?? "");
   }
 
   function addLine() {
@@ -244,6 +249,7 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
   }
 
   const isSubmitting = createWork.isPending || updateWork.isPending;
+  const isFormLoading = isEditMode && (isLoadingWork || isFetching) && !existingWork;
 
   function renderTechnicianSelect(
     index: number,
@@ -262,13 +268,22 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
           value={line[field]}
           valueLabel={line[nameField]}
           onChange={(next) => {
-            updateLine(index, { [field]: next });
+            applyLinePatch(index, {
+              [field]: next,
+              ...(next ? {} : { [nameField]: undefined }),
+            });
             if (field === "technicianId" && onPrimaryChange) {
               onPrimaryChange(next);
             }
           }}
           onSelectOption={(option) => {
-            updateLine(index, { [nameField]: option?.label });
+            applyLinePatch(index, {
+              [field]: option?.id ?? "",
+              [nameField]: option?.label,
+            });
+            if (field === "technicianId" && onPrimaryChange && option?.id) {
+              onPrimaryChange(option.id);
+            }
           }}
           queryKey="technicians-form"
           loadOptions={loadActiveTechnicianOptions}
@@ -311,12 +326,30 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
               <SearchableEntitySelect
                 value={doctorId}
                 valueLabel={doctorName}
-                onChange={(next) => void handleDoctorChange(next)}
-                onSelectOption={(option) => setDoctorName(option?.label ?? null)}
+                onChange={(next) => {
+                  setDoctorId(next);
+                  if (!next) setDoctorName(null);
+                }}
+                onSelectOption={(option) => {
+                  const nextId = option?.id ?? "";
+                  setDoctorId(nextId);
+                  setDoctorName(option?.label ?? null);
+                  if (nextId) {
+                    void (async () => {
+                      for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        if (line.workTypeId) {
+                          await lookupAndApplyLinePrices(i, nextId, line.workTypeId, line.technicianId);
+                        }
+                      }
+                    })();
+                  }
+                }}
                 queryKey="doctors-form"
                 loadOptions={loadDoctorOptions}
                 emptyLabel="Selectează doctor"
                 searchPlaceholder="Caută doctor..."
+                disabled={isFormLoading}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -361,7 +394,7 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
                       valueLabel={line.workTypeName}
                       onChange={(workTypeId) => handleWorkTypeChange(index, workTypeId)}
                       onSelectOption={(option) => {
-                        updateLine(index, { workTypeName: option?.label });
+                        handleWorkTypeChange(index, option?.id ?? "", option?.label);
                       }}
                       queryKey="work-types-form"
                       loadOptions={loadWorkTypeOptions}
@@ -409,13 +442,17 @@ export function WorkFormDialog({ open, onOpenChange, workId = null }: WorkFormDi
             </div>
           </div>
 
+          {isFormLoading && (
+            <p className="text-sm text-muted-foreground">Se încarcă datele lucrării...</p>
+          )}
+
           {formError && <p className="text-xs text-destructive">{formError}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Anulează
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isFormLoading}>
               {isSubmitting ? "Se salvează..." : "Salvează"}
             </Button>
           </DialogFooter>
