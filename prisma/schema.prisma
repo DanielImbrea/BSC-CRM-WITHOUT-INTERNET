@@ -137,10 +137,12 @@ model WorkLine {
   technician2Id       String?
   technician3         Technician? @relation("WorkLineTechnician3", fields: [technician3Id], references: [id], onDelete: SetNull)
   technician3Id       String?
-  quantity            Int
-  doctorUnitPrice     Int
-  technicianUnitPrice Int
-  createdAt           DateTime    @default(now())
+  quantity              Int
+  doctorUnitPrice       Int
+  technicianUnitPrice   Int
+  technician2UnitPrice  Int         @default(0)
+  technician3UnitPrice  Int         @default(0)
+  createdAt             DateTime    @default(now())
 
   @@index([workId])
   @@index([workTypeId])

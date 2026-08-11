@@ -60,6 +60,8 @@ CREATE TABLE "WorkLine" (
     "quantity" INTEGER NOT NULL,
     "doctorUnitPrice" INTEGER NOT NULL,
     "technicianUnitPrice" INTEGER NOT NULL,
+    "technician2UnitPrice" INTEGER NOT NULL DEFAULT 0,
+    "technician3UnitPrice" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "WorkLine_workId_fkey" FOREIGN KEY ("workId") REFERENCES "Work" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "WorkLine_workTypeId_fkey" FOREIGN KEY ("workTypeId") REFERENCES "WorkType" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,

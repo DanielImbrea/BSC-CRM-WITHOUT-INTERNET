@@ -242,6 +242,8 @@ export interface WorkLineDto {
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
+  technician2UnitPrice: number;
+  technician3UnitPrice: number;
   doctorLineTotal: number;
   technicianLineTotal: number;
 }
@@ -294,6 +296,8 @@ export interface CreateWorkLineInput {
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
+  technician2UnitPrice?: number;
+  technician3UnitPrice?: number;
 }
 
 export interface CreateWorkRequest {
@@ -388,19 +392,12 @@ export interface DoctorUnpaidReportLine {
   amount: number;
 }
 
-export interface DoctorWorkTypeBreakdown {
-  workTypeName: string;
-  quantity: number;
-  amount: number;
-}
-
 export interface DoctorUnpaidReport {
   doctorName: string;
   month: string;
   paymentStatus?: PaymentStatus;
   lines: DoctorUnpaidReportLine[];
   totalAmount: number;
-  workTypeBreakdown?: DoctorWorkTypeBreakdown[];
 }
 
 export interface TechnicianSalaryReportLine {

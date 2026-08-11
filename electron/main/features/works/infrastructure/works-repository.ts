@@ -16,6 +16,8 @@ export interface WorkLineRecord {
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
+  technician2UnitPrice: number;
+  technician3UnitPrice: number;
 }
 
 export interface WorkListRecord {
@@ -82,6 +84,8 @@ function mapLines(work: WorkWithRelations): WorkLineRecord[] {
     quantity: line.quantity,
     doctorUnitPrice: line.doctorUnitPrice,
     technicianUnitPrice: line.technicianUnitPrice,
+    technician2UnitPrice: line.technician2UnitPrice,
+    technician3UnitPrice: line.technician3UnitPrice,
   }));
 }
 
@@ -330,6 +334,8 @@ export const worksRepository = {
         quantity: number;
         doctorUnitPrice: number;
         technicianUnitPrice: number;
+        technician2UnitPrice: number;
+        technician3UnitPrice: number;
       }[];
     },
     db: DbClient = getPrismaClient(),
@@ -353,6 +359,8 @@ export const worksRepository = {
             quantity: line.quantity,
             doctorUnitPrice: line.doctorUnitPrice,
             technicianUnitPrice: line.technicianUnitPrice,
+            technician2UnitPrice: line.technician2UnitPrice,
+            technician3UnitPrice: line.technician3UnitPrice,
           })),
         },
       },
@@ -380,6 +388,8 @@ export const worksRepository = {
         quantity: number;
         doctorUnitPrice: number;
         technicianUnitPrice: number;
+        technician2UnitPrice: number;
+        technician3UnitPrice: number;
       }[];
     },
     db: DbClient = getPrismaClient(),
@@ -405,6 +415,8 @@ export const worksRepository = {
             quantity: line.quantity,
             doctorUnitPrice: line.doctorUnitPrice,
             technicianUnitPrice: line.technicianUnitPrice,
+            technician2UnitPrice: line.technician2UnitPrice,
+            technician3UnitPrice: line.technician3UnitPrice,
           })),
         },
       },

@@ -3,7 +3,7 @@ import { logger } from "./logger";
 
 /** Coloane obligatorii — verificare la pornire (evită P2022 pe upgrade-uri parțiale). */
 export const REQUIRED_COLUMNS: Record<string, readonly string[]> = {
-  WorkLine: ["technician2Id", "technician3Id"],
+  WorkLine: ["technician2Id", "technician3Id", "technician2UnitPrice", "technician3UnitPrice"],
 };
 
 interface ColumnPatch {
@@ -27,6 +27,16 @@ const COLUMN_PATCHES: ColumnPatch[] = [
     table: "WorkLine",
     column: "technician3Id",
     alterSql: `ALTER TABLE "WorkLine" ADD COLUMN "technician3Id" TEXT REFERENCES "Technician"("id") ON DELETE SET NULL ON UPDATE CASCADE`,
+  },
+  {
+    table: "WorkLine",
+    column: "technician2UnitPrice",
+    alterSql: `ALTER TABLE "WorkLine" ADD COLUMN "technician2UnitPrice" INTEGER NOT NULL DEFAULT 0`,
+  },
+  {
+    table: "WorkLine",
+    column: "technician3UnitPrice",
+    alterSql: `ALTER TABLE "WorkLine" ADD COLUMN "technician3UnitPrice" INTEGER NOT NULL DEFAULT 0`,
   },
 ];
 

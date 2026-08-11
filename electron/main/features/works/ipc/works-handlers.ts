@@ -35,6 +35,8 @@ function toLineDto(line: WorkDetailRecord["lines"][number]): WorkLineDto {
     quantity: line.quantity,
     doctorUnitPrice: line.doctorUnitPrice,
     technicianUnitPrice: line.technicianUnitPrice,
+    technician2UnitPrice: line.technician2UnitPrice,
+    technician3UnitPrice: line.technician3UnitPrice,
     doctorLineTotal: line.quantity * line.doctorUnitPrice,
     technicianLineTotal: line.quantity * line.technicianUnitPrice,
   };

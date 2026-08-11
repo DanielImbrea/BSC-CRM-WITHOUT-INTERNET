@@ -1,8 +1,9 @@
 import * as React from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { ro } from "date-fns/locale";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
-import { MonthPicker } from "@/shared/components/ui/date-picker";
+import { MonthPicker, DatePicker } from "@/shared/components/ui/date-picker";
 import { FilterEntitySelect } from "@/shared/components/filter-entity-select";
 import { loadDoctorOptions } from "@/shared/lib/catalog-options";
 import { formatDate, formatRon } from "@/shared/lib/format";
@@ -17,12 +18,17 @@ import type { DoctorUnpaidReport, PaymentStatus } from "@shared-types/ipc";
 
 const loadDoctors = loadDoctorOptions;
 
+function formatPaymentDueDate(isoDate: string): string {
+  return format(parseISO(isoDate), "d MMMM yyyy", { locale: ro });
+}
+
 export function DoctorUnpaidTab() {
   const reportMutation = useDoctorUnpaidReport();
 
   const [doctorId, setDoctorId] = React.useState("");
   const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus | "">("NEPLATITA");
   const [month, setMonth] = React.useState(format(new Date(), "yyyy-MM"));
+  const [paymentDueDate, setPaymentDueDate] = React.useState("");
   const [report, setReport] = React.useState<DoctorUnpaidReport | null>(null);
 
   const showDoctorColumn = !doctorId || report?.doctorName === "Toți doctorii";
@@ -66,6 +72,14 @@ export function DoctorUnpaidTab() {
           <Label>Perioadă</Label>
           <MonthPicker allowAll value={month} onChange={setMonth} />
         </div>
+        <div className="flex min-w-[180px] flex-col gap-1.5">
+          <Label>Termen plată (opțional)</Label>
+          <DatePicker
+            value={paymentDueDate}
+            onChange={setPaymentDueDate}
+            placeholder="Alege data"
+          />
+        </div>
         <Button onClick={() => void handleGenerate()} disabled={reportMutation.isPending}>
           {reportMutation.isPending ? "Se generează..." : "Generează"}
         </Button>
@@ -88,6 +102,11 @@ export function DoctorUnpaidTab() {
           />
 
           <ReportPrintLayout id="doctor-unpaid-report" personName={report.doctorName} reportTitle={reportTitle}>
+            {paymentDueDate && (
+              <p className="mb-4 text-sm font-medium text-foreground print:mb-3 print:text-black">
+                Termen plată: {formatPaymentDueDate(paymentDueDate)}
+              </p>
+            )}
             <ReportPrintTable
               isEmpty={report.lines.length === 0}
               emptyMessage="Nicio lucrare pentru criteriile selectate."
@@ -144,32 +163,6 @@ export function DoctorUnpaidTab() {
                 </tr>
               ))}
             </ReportPrintTable>
-
-            {report.workTypeBreakdown && report.workTypeBreakdown.length > 0 && (
-              <div className="mt-6 border-t border-border pt-4 print:mt-4 print:border-zinc-300">
-                <h3 className="mb-3 text-sm font-semibold text-foreground print:text-black">
-                  Detaliu pe tip lucrare
-                </h3>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs text-muted-foreground print:text-zinc-600">
-                      <th className="py-2 pr-3 font-medium">Tip lucrare</th>
-                      <th className="py-2 pr-3 font-medium text-right">Cantitate</th>
-                      <th className="py-2 font-medium text-right">Sumă</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.workTypeBreakdown.map((row) => (
-                      <tr key={row.workTypeName} className="border-b border-border/60 last:border-0">
-                        <td className="py-2 pr-3">{row.workTypeName}</td>
-                        <td className="py-2 pr-3 text-right">{row.quantity}</td>
-                        <td className="py-2 text-right">{formatRon(row.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </ReportPrintLayout>
         </div>
       )}

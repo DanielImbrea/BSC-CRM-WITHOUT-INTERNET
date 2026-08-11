@@ -10,27 +10,41 @@ import {
   worksRepository,
 } from "../../works/infrastructure/works-repository";
 import { parseMonthRange } from "../../works/domain/work-validation";
-import { NotFoundError, ValidationError } from "../../../shared/errors";
+import { NotFoundError } from "../../../shared/errors";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
 
+type SalaryWorkLine = {
+  technicianId: string | null;
+  technician2Id: string | null;
+  technician3Id: string | null;
+  quantity: number;
+  technicianUnitPrice: number;
+  technician2UnitPrice: number;
+  technician3UnitPrice: number;
+  workTypeId: string;
+  work: { doctorId: string };
+};
+
+function storedUnitPriceForTechnician(line: SalaryWorkLine, technicianId: string): number {
+  if (line.technicianId === technicianId) return line.technicianUnitPrice;
+  if (line.technician2Id === technicianId) return line.technician2UnitPrice;
+  if (line.technician3Id === technicianId) return line.technician3UnitPrice;
+  return 0;
+}
+
 async function resolveTechnicianLineAmount(
-  line: {
-    technicianId: string | null;
-    technician2Id: string | null;
-    technician3Id: string | null;
-    quantity: number;
-    technicianUnitPrice: number;
-    workTypeId: string;
-    work: { doctorId: string };
-  },
+  line: SalaryWorkLine,
   technicianId: string,
 ): Promise<number> {
-  const isPrimary = line.technicianId === technicianId;
-  const isSecondary = line.technician2Id === technicianId || line.technician3Id === technicianId;
-  if (!isPrimary && !isSecondary) return 0;
+  const isAssigned =
+    line.technicianId === technicianId ||
+    line.technician2Id === technicianId ||
+    line.technician3Id === technicianId;
+  if (!isAssigned) return 0;
 
-  if (isPrimary && line.technicianUnitPrice > 0) {
-    return line.quantity * line.technicianUnitPrice;
+  const storedPrice = storedUnitPriceForTechnician(line, technicianId);
+  if (storedPrice > 0) {
+    return line.quantity * storedPrice;
   }
 
   const rate = await technicianRatesRepository.findPrice(
@@ -42,30 +56,7 @@ async function resolveTechnicianLineAmount(
     return line.quantity * rate;
   }
 
-  if (isPrimary) {
-    return line.quantity * line.technicianUnitPrice;
-  }
-
   return 0;
-}
-
-function buildWorkTypeBreakdown(
-  works: Array<{
-    lines: Array<{ quantity: number; doctorUnitPrice: number; workTypeName: string }>;
-  }>,
-) {
-  const totals = new Map<string, { quantity: number; amount: number }>();
-  for (const work of works) {
-    for (const line of work.lines) {
-      const existing = totals.get(line.workTypeName) ?? { quantity: 0, amount: 0 };
-      existing.quantity += line.quantity;
-      existing.amount += line.quantity * line.doctorUnitPrice;
-      totals.set(line.workTypeName, existing);
-    }
-  }
-  return [...totals.entries()]
-    .map(([workTypeName, data]) => ({ workTypeName, ...data }))
-    .sort((a, b) => a.workTypeName.localeCompare(b.workTypeName, "ro"));
 }
 
 export async function getDoctorUnpaidReport(payload: MonthReportRequest) {
@@ -115,16 +106,6 @@ export async function getDoctorUnpaidReport(payload: MonthReportRequest) {
     ),
   }));
 
-  const workTypeBreakdown = buildWorkTypeBreakdown(
-    worksWithLines.map((work) => ({
-      lines: work.lines.map((line) => ({
-        quantity: line.quantity,
-        doctorUnitPrice: line.doctorUnitPrice,
-        workTypeName: line.workType.name,
-      })),
-    })),
-  );
-
   let doctorName = "Toți doctorii";
   if (payload.doctorId) {
     const doctor = await doctorsRepository.findById(payload.doctorId);
@@ -137,7 +118,6 @@ export async function getDoctorUnpaidReport(payload: MonthReportRequest) {
     paymentStatus: payload.paymentStatus,
     lines,
     totalAmount: lines.reduce((sum, line) => sum + line.amount, 0),
-    workTypeBreakdown,
   };
 }
 
@@ -211,11 +191,9 @@ export async function getTechnicianSalaryReport(payload: MonthReportRequest) {
   }> = [];
 
   for (const line of workLines) {
-    const technicianIds = [
-      line.technicianId,
-      line.technician2Id,
-      line.technician3Id,
-    ].filter((id): id is string => id !== null);
+    const technicianIds = [line.technicianId, line.technician2Id, line.technician3Id].filter(
+      (id): id is string => id !== null,
+    );
 
     const targets = payload.technicianId
       ? technicianIds.filter((id) => id === payload.technicianId)

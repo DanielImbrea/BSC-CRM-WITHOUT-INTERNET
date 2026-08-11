@@ -6,9 +6,51 @@ import {
   type WorkDetailRecord,
   type WorkListRecord,
 } from "../infrastructure/works-repository";
-import { assertPaymentStatus, assertWorkIsValid, type WorkInput } from "../domain/work-validation";
+import { assertPaymentStatus, assertWorkIsValid, type WorkInput, type WorkLineInput } from "../domain/work-validation";
 import { NotFoundError } from "../../../shared/errors";
 import { requireAuthenticated } from "../../auth/application/auth-use-cases";
+import { technicianRatesRepository } from "../../rates/infrastructure/technician-rates-repository";
+
+async function lookupTechnicianUnitPrice(
+  doctorId: string,
+  workTypeId: string,
+  technicianId: string,
+): Promise<number> {
+  const rate = await technicianRatesRepository.findPrice(technicianId, doctorId, workTypeId);
+  return rate ?? 0;
+}
+
+async function resolveLineTechnicianPrices(
+  doctorId: string,
+  line: WorkLineInput,
+): Promise<{
+  technicianUnitPrice: number;
+  technician2UnitPrice: number;
+  technician3UnitPrice: number;
+}> {
+  let technicianUnitPrice = line.technicianUnitPrice;
+  if (line.technicianId && technicianUnitPrice === 0) {
+    technicianUnitPrice = await lookupTechnicianUnitPrice(doctorId, line.workTypeId, line.technicianId);
+  }
+
+  let technician2UnitPrice = 0;
+  if (line.technician2Id) {
+    technician2UnitPrice =
+      line.technician2UnitPrice && line.technician2UnitPrice > 0
+        ? line.technician2UnitPrice
+        : await lookupTechnicianUnitPrice(doctorId, line.workTypeId, line.technician2Id);
+  }
+
+  let technician3UnitPrice = 0;
+  if (line.technician3Id) {
+    technician3UnitPrice =
+      line.technician3UnitPrice && line.technician3UnitPrice > 0
+        ? line.technician3UnitPrice
+        : await lookupTechnicianUnitPrice(doctorId, line.workTypeId, line.technician3Id);
+  }
+
+  return { technicianUnitPrice, technician2UnitPrice, technician3UnitPrice };
+}
 
 function normalizeWorkInput(input: Omit<WorkInput, "entryDate"> & { entryDate: string | Date }): WorkInput {
   return {
@@ -21,7 +63,22 @@ function normalizeWorkInput(input: Omit<WorkInput, "entryDate"> & { entryDate: s
   };
 }
 
-function toPersistence(input: WorkInput) {
+async function toPersistence(input: WorkInput) {
+  const lines = await Promise.all(
+    input.lines.map(async (line) => {
+      const prices = await resolveLineTechnicianPrices(input.doctorId, line);
+      return {
+        workTypeId: line.workTypeId,
+        technicianId: line.technicianId ?? null,
+        technician2Id: line.technician2Id ?? null,
+        technician3Id: line.technician3Id ?? null,
+        quantity: line.quantity,
+        doctorUnitPrice: line.doctorUnitPrice,
+        ...prices,
+      };
+    }),
+  );
+
   return {
     entryDate: input.entryDate,
     patientName: input.patientName,
@@ -31,15 +88,7 @@ function toPersistence(input: WorkInput) {
     technician1Id: null,
     technician2Id: null,
     technician3Id: null,
-    lines: input.lines.map((line) => ({
-      workTypeId: line.workTypeId,
-      technicianId: line.technicianId ?? null,
-      technician2Id: line.technician2Id ?? null,
-      technician3Id: line.technician3Id ?? null,
-      quantity: line.quantity,
-      doctorUnitPrice: line.doctorUnitPrice,
-      technicianUnitPrice: line.technicianUnitPrice,
-    })),
+    lines,
   };
 }
 
@@ -85,7 +134,7 @@ export async function createWork(
 
   const db = getPrismaClient();
   try {
-    return await worksRepository.create(toPersistence(normalized), db);
+    return await worksRepository.create(await toPersistence(normalized), db);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       throw new NotFoundError("Entitate", "referință invalidă");
@@ -102,7 +151,7 @@ export async function updateWork(
   const normalized = normalizeWorkInput(input);
   assertWorkIsValid(normalized);
   if (!(await worksRepository.findById(id))) throw new NotFoundError("Work", id);
-  return worksRepository.update(id, toPersistence(normalized));
+  return worksRepository.update(id, await toPersistence(normalized));
 }
 
 export async function updateWorkPaymentStatus(

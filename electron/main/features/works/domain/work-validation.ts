@@ -9,6 +9,8 @@ export interface WorkLineInput {
   quantity: number;
   doctorUnitPrice: number;
   technicianUnitPrice: number;
+  technician2UnitPrice?: number;
+  technician3UnitPrice?: number;
 }
 
 export interface WorkInput {
@@ -51,6 +53,12 @@ export function assertWorkIsValid(input: WorkInput): void {
     }
     if (!Number.isInteger(line.technicianUnitPrice) || line.technicianUnitPrice < 0) {
       throw new ValidationError("Prețul tehnician pe linie trebuie să fie valid.");
+    }
+    if (line.technician2UnitPrice != null && (!Number.isInteger(line.technician2UnitPrice) || line.technician2UnitPrice < 0)) {
+      throw new ValidationError("Prețul tehnician 2 pe linie trebuie să fie valid.");
+    }
+    if (line.technician3UnitPrice != null && (!Number.isInteger(line.technician3UnitPrice) || line.technician3UnitPrice < 0)) {
+      throw new ValidationError("Prețul tehnician 3 pe linie trebuie să fie valid.");
     }
   }
 }
