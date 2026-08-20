@@ -33,6 +33,37 @@ function workTypeIdsFromPrices(prices: Record<string, number>): Set<string> {
   return ids;
 }
 
+function useSyncedHorizontalScroll(tableWidth: number) {
+  const gridScrollRef = React.useRef<HTMLDivElement>(null);
+  const bottomScrollRef = React.useRef<HTMLDivElement>(null);
+  const syncingRef = React.useRef(false);
+
+  const syncScrollLeft = React.useCallback((source: HTMLDivElement, target: HTMLDivElement | null) => {
+    if (!target || syncingRef.current) return;
+    syncingRef.current = true;
+    target.scrollLeft = source.scrollLeft;
+    syncingRef.current = false;
+  }, []);
+
+  const onGridScroll = React.useCallback(() => {
+    const grid = gridScrollRef.current;
+    if (!grid) return;
+    syncScrollLeft(grid, bottomScrollRef.current);
+  }, [syncScrollLeft]);
+
+  const onBottomScroll = React.useCallback(() => {
+    const bottom = bottomScrollRef.current;
+    if (!bottom) return;
+    syncScrollLeft(bottom, gridScrollRef.current);
+  }, [syncScrollLeft]);
+
+  React.useEffect(() => {
+    onGridScroll();
+  }, [tableWidth, onGridScroll]);
+
+  return { gridScrollRef, bottomScrollRef, onGridScroll, onBottomScroll };
+}
+
 interface TechnicianRatesDialogProps {
   technician: TechnicianDto | null;
   onOpenChange: () => void;
@@ -160,6 +191,33 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
 
   const showWorkTypeHint = !loading && workTypes.length > 0 && visibleWorkTypes.length === 0;
 
+  const tableRef = React.useRef<HTMLTableElement>(null);
+  const [tableScrollWidth, setTableScrollWidth] = React.useState(0);
+  const [hasHorizontalOverflow, setHasHorizontalOverflow] = React.useState(false);
+  const { gridScrollRef, bottomScrollRef, onGridScroll, onBottomScroll } =
+    useSyncedHorizontalScroll(tableScrollWidth);
+
+  React.useLayoutEffect(() => {
+    const table = tableRef.current;
+    const grid = gridScrollRef.current;
+    if (!table || !grid) {
+      setTableScrollWidth(0);
+      setHasHorizontalOverflow(false);
+      return;
+    }
+
+    const updateWidth = () => {
+      setTableScrollWidth(table.scrollWidth);
+      setHasHorizontalOverflow(table.scrollWidth > grid.clientWidth + 1);
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(table);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [visibleDoctors.length, visibleWorkTypes.length, cells, gridScrollRef]);
+
   return (
     <Dialog open={technician !== null} onOpenChange={() => onOpenChange()}>
       <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col gap-4 overflow-hidden">
@@ -211,49 +269,68 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
             )}
 
             {visibleWorkTypes.length > 0 && (
-              <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
-                <table className="min-w-full border-separate border-spacing-0 text-xs">
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 top-0 z-30 min-w-[140px] border-b border-r border-border bg-card px-2 py-2 text-left font-medium text-muted-foreground shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.15)]">
-                        Doctor / Cabinet
-                      </th>
-                      {visibleWorkTypes.map((wt) => (
-                        <th
-                          key={wt.id}
-                          className="sticky top-0 z-20 min-w-[72px] max-w-[120px] border-b border-border bg-card px-1 py-2 text-center font-medium text-muted-foreground shadow-[0_2px_4px_-2px_rgba(0,0,0,0.12)]"
-                          title={wt.name}
-                        >
-                          <span className="line-clamp-2">{wt.name}</span>
+              <div className="flex min-h-0 flex-1 flex-col rounded-md border border-border">
+                <div
+                  ref={gridScrollRef}
+                  className="min-h-0 flex-1 overflow-auto"
+                  onScroll={onGridScroll}
+                >
+                  <table
+                    ref={tableRef}
+                    className="min-w-full border-separate border-spacing-0 text-xs"
+                  >
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 top-0 z-30 min-w-[140px] border-b border-r border-border bg-card px-2 py-2 text-left font-medium text-muted-foreground shadow-[2px_2px_4px_-2px_rgba(0,0,0,0.15)]">
+                          Doctor / Cabinet
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleDoctors.map((doctor) => (
-                      <tr key={doctor.id}>
-                        <td className="sticky left-0 z-10 border-b border-r border-border bg-background px-2 py-1.5 font-medium whitespace-nowrap shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]">
-                          {doctor.name}
-                        </td>
-                        {visibleWorkTypes.map((wt) => {
-                          const key = cellKey(doctor.id, wt.id);
-                          return (
-                            <td key={wt.id} className="border-b border-border px-1 py-1">
-                              <Input
-                                className="h-8 min-w-[64px] px-1 text-center text-xs"
-                                placeholder="—"
-                                value={cells[key] ?? ""}
-                                onChange={(e) =>
-                                  setCells((prev) => ({ ...prev, [key]: e.target.value }))
-                                }
-                              />
-                            </td>
-                          );
-                        })}
+                        {visibleWorkTypes.map((wt) => (
+                          <th
+                            key={wt.id}
+                            className="sticky top-0 z-20 min-w-[72px] max-w-[120px] border-b border-border bg-card px-1 py-2 text-center font-medium text-muted-foreground shadow-[0_2px_4px_-2px_rgba(0,0,0,0.12)]"
+                            title={wt.name}
+                          >
+                            <span className="line-clamp-2">{wt.name}</span>
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {visibleDoctors.map((doctor) => (
+                        <tr key={doctor.id}>
+                          <td className="sticky left-0 z-10 border-b border-r border-border bg-background px-2 py-1.5 font-medium whitespace-nowrap shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]">
+                            {doctor.name}
+                          </td>
+                          {visibleWorkTypes.map((wt) => {
+                            const key = cellKey(doctor.id, wt.id);
+                            return (
+                              <td key={wt.id} className="border-b border-border px-1 py-1">
+                                <Input
+                                  className="h-8 min-w-[64px] px-1 text-center text-xs"
+                                  placeholder="—"
+                                  value={cells[key] ?? ""}
+                                  onChange={(e) =>
+                                    setCells((prev) => ({ ...prev, [key]: e.target.value }))
+                                  }
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {hasHorizontalOverflow && (
+                  <div
+                    ref={bottomScrollRef}
+                    className="h-4 shrink-0 overflow-x-scroll overflow-y-hidden border-t border-border bg-muted/30"
+                    onScroll={onBottomScroll}
+                    aria-label="Scroll orizontal grilă"
+                  >
+                    <div style={{ width: tableScrollWidth, height: 1 }} />
+                  </div>
+                )}
               </div>
             )}
 
