@@ -15,6 +15,7 @@ import { technicianRatesApi } from "../api/technician-rates-api";
 import type { RateGridCell, TechnicianDto } from "@shared-types/ipc";
 
 const MAX_VISIBLE_WORK_TYPES = 40;
+const LARGE_CATALOG_THRESHOLD = MAX_VISIBLE_WORK_TYPES;
 
 function baniToInput(bani: number): string {
   return (bani / 100).toFixed(2);
@@ -107,12 +108,6 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
         }
         initialPriceKeysRef.current = new Set(Object.keys(grid.prices));
         setCells(next);
-
-        const presetWorkTypeIds = workTypeIdsFromPrices(grid.prices);
-        if (presetWorkTypeIds.size > 0) {
-          const first = grid.workTypes.find((wt) => presetWorkTypeIds.has(wt.id));
-          if (first) setWorkTypeFilter(first.name.slice(0, Math.min(8, first.name.length)));
-        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -136,6 +131,18 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
 
   const visibleWorkTypes = React.useMemo(() => {
     const term = workTypeFilter.trim().toLowerCase();
+
+    if (term) {
+      return workTypes
+        .filter((wt) => wt.name.toLowerCase().includes(term))
+        .slice(0, MAX_VISIBLE_WORK_TYPES);
+    }
+
+    // Catalog mic (ex. ~42 tipuri): afișează toate coloanele imediat, ca înainte.
+    if (workTypes.length <= LARGE_CATALOG_THRESHOLD) {
+      return workTypes;
+    }
+
     const pricedIds = workTypeIdsFromPrices(
       Object.fromEntries(
         Object.entries(cells)
@@ -144,14 +151,11 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
       ),
     );
 
-    if (!term) {
-      if (pricedIds.size === 0) return [];
+    if (pricedIds.size > 0) {
       return workTypes.filter((wt) => pricedIds.has(wt.id)).slice(0, MAX_VISIBLE_WORK_TYPES);
     }
 
-    return workTypes
-      .filter((wt) => wt.name.toLowerCase().includes(term))
-      .slice(0, MAX_VISIBLE_WORK_TYPES);
+    return workTypes.slice(0, MAX_VISIBLE_WORK_TYPES);
   }, [workTypes, workTypeFilter, cells]);
 
   async function handleSave() {
@@ -189,34 +193,33 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
     }
   }
 
-  const showWorkTypeHint = !loading && workTypes.length > 0 && visibleWorkTypes.length === 0;
+  const showWorkTypeHint =
+    !loading &&
+    workTypes.length > LARGE_CATALOG_THRESHOLD &&
+    workTypeFilter.trim().length > 0 &&
+    visibleWorkTypes.length === 0;
+
+  const isLargeCatalog = workTypes.length > LARGE_CATALOG_THRESHOLD;
 
   const tableRef = React.useRef<HTMLTableElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = React.useState(0);
-  const [hasHorizontalOverflow, setHasHorizontalOverflow] = React.useState(false);
   const { gridScrollRef, bottomScrollRef, onGridScroll, onBottomScroll } =
     useSyncedHorizontalScroll(tableScrollWidth);
 
   React.useLayoutEffect(() => {
     const table = tableRef.current;
-    const grid = gridScrollRef.current;
-    if (!table || !grid) {
+    if (!table) {
       setTableScrollWidth(0);
-      setHasHorizontalOverflow(false);
       return;
     }
 
-    const updateWidth = () => {
-      setTableScrollWidth(table.scrollWidth);
-      setHasHorizontalOverflow(table.scrollWidth > grid.clientWidth + 1);
-    };
+    const updateWidth = () => setTableScrollWidth(table.scrollWidth);
 
     updateWidth();
     const observer = new ResizeObserver(updateWidth);
     observer.observe(table);
-    observer.observe(grid);
     return () => observer.disconnect();
-  }, [visibleDoctors.length, visibleWorkTypes.length, cells, gridScrollRef]);
+  }, [visibleDoctors.length, visibleWorkTypes.length, cells]);
 
   return (
     <Dialog open={technician !== null} onOpenChange={() => onOpenChange()}>
@@ -224,9 +227,14 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
         <DialogHeader>
           <DialogTitle>Grilă tarife — {technician?.name}</DialogTitle>
           <DialogDescription>
-            Preț tehnician (RON/buc) per doctor și tip lucrare. Folosește filtrele — catalogul are{" "}
-            {workTypes.length.toLocaleString("ro-RO")} tipuri lucrări; se afișează max.{" "}
-            {MAX_VISIBLE_WORK_TYPES} coloane odată.
+            Preț tehnician (RON/buc) per doctor și tip lucrare — ca în Excel.
+            {isLargeCatalog && (
+              <>
+                {" "}
+                Catalogul are {workTypes.length.toLocaleString("ro-RO")} tipuri lucrări; folosește
+                căutarea pentru coloane (max. {MAX_VISIBLE_WORK_TYPES} odată).
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -263,8 +271,8 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
 
             {showWorkTypeHint && (
               <p className="text-sm text-muted-foreground">
-                Caută un tip de lucrare mai sus pentru a afișa coloanele. Grila nu poate încărca
-                mii de coloane simultan.
+                Niciun tip de lucrare nu corespunde căutării. Încearcă alt termen (ex. coroana,
+                zirconiu).
               </p>
             )}
 
@@ -272,7 +280,7 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
               <div className="flex min-h-0 flex-1 flex-col rounded-md border border-border">
                 <div
                   ref={gridScrollRef}
-                  className="min-h-0 flex-1 overflow-auto"
+                  className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
                   onScroll={onGridScroll}
                 >
                   <table
@@ -321,16 +329,14 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
                     </tbody>
                   </table>
                 </div>
-                {hasHorizontalOverflow && (
-                  <div
-                    ref={bottomScrollRef}
-                    className="h-4 shrink-0 overflow-x-scroll overflow-y-hidden border-t border-border bg-muted/30"
-                    onScroll={onBottomScroll}
-                    aria-label="Scroll orizontal grilă"
-                  >
-                    <div style={{ width: tableScrollWidth, height: 1 }} />
-                  </div>
-                )}
+                <div
+                  ref={bottomScrollRef}
+                  className="h-5 shrink-0 overflow-x-scroll overflow-y-hidden border-t border-border bg-muted/40 [scrollbar-gutter:stable]"
+                  onScroll={onBottomScroll}
+                  aria-label="Scroll orizontal grilă"
+                >
+                  <div style={{ width: Math.max(tableScrollWidth, 1), height: 1 }} />
+                </div>
               </div>
             )}
 
