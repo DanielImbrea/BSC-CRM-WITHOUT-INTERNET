@@ -516,3 +516,44 @@ html.report-pdf-export .report-print-total-row td {
   border-top: 2px solid #4338ca !important;
   border-bottom: none !important;
 }
+
+/* Grilă tarife tehnician — scrollbars permanente (Windows: click + tragere) */
+.rates-grid-scroll-y {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+
+.rates-grid-scroll-x {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  min-height: 17px;
+  height: 17px;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+
+.rates-grid-scroll-y::-webkit-scrollbar,
+.rates-grid-scroll-x::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.rates-grid-scroll-y::-webkit-scrollbar-track,
+.rates-grid-scroll-x::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.rates-grid-scroll-y::-webkit-scrollbar-thumb,
+.rates-grid-scroll-x::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.5);
+  border-radius: 7px;
+  border: 2px solid hsl(var(--muted));
+}
+
+.rates-grid-scroll-y::-webkit-scrollbar-thumb:hover,
+.rates-grid-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.7);
+}

@@ -223,8 +223,8 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
 
   return (
     <Dialog open={technician !== null} onOpenChange={() => onOpenChange()}>
-      <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col gap-4 overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="flex h-[min(90vh,820px)] max-w-5xl flex-col gap-3 overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Grilă tarife — {technician?.name}</DialogTitle>
           <DialogDescription>
             Preț tehnician (RON/buc) per doctor și tip lucrare — ca în Excel.
@@ -247,8 +247,8 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
         )}
 
         {!loading && doctors.length > 0 && workTypes.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 print:hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 print:hidden">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="doctorGridFilter">Filtrează doctor / cabinet</Label>
                 <Input
@@ -277,10 +277,10 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
             )}
 
             {visibleWorkTypes.length > 0 && (
-              <div className="flex min-h-0 flex-1 flex-col rounded-md border border-border">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border">
                 <div
                   ref={gridScrollRef}
-                  className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+                  className="rates-grid-scroll-y min-h-0 flex-1"
                   onScroll={onGridScroll}
                 >
                   <table
@@ -331,27 +331,27 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
                 </div>
                 <div
                   ref={bottomScrollRef}
-                  className="h-5 shrink-0 overflow-x-scroll overflow-y-hidden border-t border-border bg-muted/40 [scrollbar-gutter:stable]"
+                  className="rates-grid-scroll-x border-t border-border bg-muted/40"
                   onScroll={onBottomScroll}
                   aria-label="Scroll orizontal grilă"
                 >
-                  <div style={{ width: Math.max(tableScrollWidth, 1), height: 1 }} />
+                  <div style={{ width: Math.max(tableScrollWidth, 1), height: 12 }} />
                 </div>
               </div>
             )}
 
             {visibleWorkTypes.length > 0 && (
-              <p className="text-xs text-muted-foreground print:hidden">
+              <p className="shrink-0 text-xs text-muted-foreground print:hidden">
                 {visibleDoctors.length.toLocaleString("ro-RO")} doctori ·{" "}
                 {visibleWorkTypes.length.toLocaleString("ro-RO")} tipuri lucrări afișate
               </p>
             )}
-          </>
+          </div>
         )}
 
         {error && <p className="text-xs text-destructive">{error}</p>}
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange()}>
             Anulează
           </Button>
