@@ -108,9 +108,18 @@ export function computeDoctorTotal(lines: Pick<WorkLineRecord, "quantity" | "doc
 }
 
 export function computeTechnicianTotal(
-  lines: Pick<WorkLineRecord, "quantity" | "technicianUnitPrice">[],
+  lines: Pick<
+    WorkLineRecord,
+    "quantity" | "technicianUnitPrice" | "technician2UnitPrice" | "technician3UnitPrice"
+  >[],
 ): number {
-  return lines.reduce((sum, line) => sum + line.quantity * line.technicianUnitPrice, 0);
+  return lines.reduce(
+    (sum, line) =>
+      sum +
+      line.quantity *
+        (line.technicianUnitPrice + line.technician2UnitPrice + line.technician3UnitPrice),
+    0,
+  );
 }
 
 export function buildWorkSummary(lines: Pick<WorkLineRecord, "quantity" | "workTypeName">[]): string {

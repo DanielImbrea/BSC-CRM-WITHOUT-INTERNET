@@ -3,10 +3,9 @@ import { getPrismaClient } from "../../../shared/db";
 import { doctorsRepository } from "../../doctors/infrastructure/doctors-repository";
 import { techniciansRepository } from "../../technicians/infrastructure/technicians-repository";
 import { technicianRatesRepository } from "../../rates/infrastructure/technician-rates-repository";
+import { doctorRatesRepository } from "../../rates/infrastructure/doctor-rates-repository";
 import {
   buildWorkSummary,
-  computeDoctorTotal,
-  computeTechnicianTotal,
   worksRepository,
 } from "../../works/infrastructure/works-repository";
 import { parseMonthRange } from "../../works/domain/work-validation";
@@ -32,6 +31,17 @@ function storedUnitPriceForTechnician(line: SalaryWorkLine, technicianId: string
   return 0;
 }
 
+async function resolveTechnicianUnitPrice(
+  technicianId: string,
+  doctorId: string,
+  workTypeId: string,
+  storedUnitPrice: number,
+): Promise<number> {
+  if (storedUnitPrice > 0) return storedUnitPrice;
+  const rate = await technicianRatesRepository.findPrice(technicianId, doctorId, workTypeId);
+  return rate ?? 0;
+}
+
 async function resolveTechnicianLineAmount(
   line: SalaryWorkLine,
   technicianId: string,
@@ -43,20 +53,58 @@ async function resolveTechnicianLineAmount(
   if (!isAssigned) return 0;
 
   const storedPrice = storedUnitPriceForTechnician(line, technicianId);
-  if (storedPrice > 0) {
-    return line.quantity * storedPrice;
-  }
-
-  const rate = await technicianRatesRepository.findPrice(
+  const unitPrice = await resolveTechnicianUnitPrice(
     technicianId,
     line.work.doctorId,
     line.workTypeId,
+    storedPrice,
   );
-  if (rate != null && rate > 0) {
-    return line.quantity * rate;
-  }
+  return line.quantity * unitPrice;
+}
 
-  return 0;
+async function resolveDoctorLineAmount(
+  doctorId: string,
+  line: { quantity: number; doctorUnitPrice: number; workTypeId: string },
+): Promise<number> {
+  let unitPrice = line.doctorUnitPrice;
+  if (unitPrice <= 0) {
+    const rate = await doctorRatesRepository.findPrice(doctorId, line.workTypeId);
+    unitPrice = rate ?? 0;
+  }
+  return line.quantity * unitPrice;
+}
+
+async function computeWorkTechnicianPay(
+  doctorId: string,
+  line: {
+    technicianId: string | null;
+    technician2Id: string | null;
+    technician3Id: string | null;
+    quantity: number;
+    technicianUnitPrice: number;
+    technician2UnitPrice: number;
+    technician3UnitPrice: number;
+    workTypeId: string;
+  },
+): Promise<number> {
+  const slots = [
+    { id: line.technicianId, stored: line.technicianUnitPrice },
+    { id: line.technician2Id, stored: line.technician2UnitPrice },
+    { id: line.technician3Id, stored: line.technician3UnitPrice },
+  ];
+
+  let total = 0;
+  for (const slot of slots) {
+    if (!slot.id) continue;
+    const unitPrice = await resolveTechnicianUnitPrice(
+      slot.id,
+      doctorId,
+      line.workTypeId,
+      slot.stored,
+    );
+    total += line.quantity * unitPrice;
+  }
+  return total;
 }
 
 export async function getDoctorUnpaidReport(payload: MonthReportRequest) {
@@ -90,21 +138,22 @@ export async function getDoctorUnpaidReport(payload: MonthReportRequest) {
         })
       : [];
 
-  const lines = worksWithLines.map((work) => ({
-    workId: work.id,
-    entryDate: work.entryDate.toISOString(),
-    patientName: work.patientName,
-    doctorName: work.doctor.name,
-    workSummary: buildWorkSummary(
-      work.lines.map((line) => ({ quantity: line.quantity, workTypeName: line.workType.name })),
-    ),
-    amount: computeDoctorTotal(
-      work.lines.map((line) => ({
-        quantity: line.quantity,
-        doctorUnitPrice: line.doctorUnitPrice,
-      })),
-    ),
-  }));
+  const lines = await Promise.all(
+    worksWithLines.map(async (work) => ({
+      workId: work.id,
+      entryDate: work.entryDate.toISOString(),
+      patientName: work.patientName,
+      doctorName: work.doctor.name,
+      workSummary: buildWorkSummary(
+        work.lines.map((line) => ({ quantity: line.quantity, workTypeName: line.workType.name })),
+      ),
+      amount: (
+        await Promise.all(
+          work.lines.map((line) => resolveDoctorLineAmount(work.doctorId, line)),
+        )
+      ).reduce((sum, value) => sum + value, 0),
+    })),
+  );
 
   let doctorName = "Toți doctorii";
   if (payload.doctorId) {
@@ -201,7 +250,6 @@ export async function getTechnicianSalaryReport(payload: MonthReportRequest) {
 
     for (const techId of targets) {
       const amount = await resolveTechnicianLineAmount(line, techId);
-      if (amount <= 0) continue;
 
       lineResults.push({
         workId: line.workId,
@@ -249,7 +297,17 @@ export async function getMonthSummaryReport(payload: MonthSummaryRequest) {
     include: { lines: true },
   });
 
-  const doctorPaidTotal = works.reduce((sum, work) => sum + computeDoctorTotal(work.lines), 0);
+  const doctorPaidTotal = (
+    await Promise.all(
+      works.map(async (work) => {
+        let workTotal = 0;
+        for (const line of work.lines) {
+          workTotal += await resolveDoctorLineAmount(work.doctorId, line);
+        }
+        return workTotal;
+      }),
+    )
+  ).reduce((sum, value) => sum + value, 0);
 
   const technicianPaidWorks = await db.work.findMany({
     where: {
@@ -259,10 +317,17 @@ export async function getMonthSummaryReport(payload: MonthSummaryRequest) {
     include: { lines: true },
   });
 
-  const technicianPaidTotal = technicianPaidWorks.reduce(
-    (sum, work) => sum + computeTechnicianTotal(work.lines),
-    0,
-  );
+  const technicianPaidTotal = (
+    await Promise.all(
+      technicianPaidWorks.map(async (work) => {
+        let workTotal = 0;
+        for (const line of work.lines) {
+          workTotal += await computeWorkTechnicianPay(work.doctorId, line);
+        }
+        return workTotal;
+      }),
+    )
+  ).reduce((sum, value) => sum + value, 0);
 
   return {
     month: payload.month ?? "",

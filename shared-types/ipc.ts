@@ -168,8 +168,8 @@ export interface TechnicianRatesGrid {
   technicianId: string;
   doctors: { id: string; name: string }[];
   workTypes: { id: string; name: string }[];
-  /** Map key: `${doctorId}:${workTypeId}` → price in bani (null = neconfigurat) */
-  prices: Record<string, number | null>;
+  /** Map key: `${doctorId}:${workTypeId}` → price in bani (doar celule configurate) */
+  prices: Record<string, number>;
 }
 
 export interface LookupLinePricesRequest {

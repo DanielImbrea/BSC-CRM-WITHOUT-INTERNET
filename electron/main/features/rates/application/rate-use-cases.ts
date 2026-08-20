@@ -62,12 +62,7 @@ export async function getTechnicianRates(technicianId: string): Promise<Technici
     technicianRatesRepository.listByTechnician(technicianId),
   ]);
 
-  const prices: Record<string, number | null> = {};
-  for (const doctor of doctors) {
-    for (const wt of workTypes) {
-      prices[`${doctor.id}:${wt.id}`] = null;
-    }
-  }
+  const prices: Record<string, number> = {};
   for (const rate of rates) {
     prices[`${rate.doctorId}:${rate.workTypeId}`] = rate.pricePerUnit;
   }
