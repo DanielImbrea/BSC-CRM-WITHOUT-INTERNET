@@ -14,8 +14,9 @@ import { parseRonInput } from "@/shared/lib/format";
 import { technicianRatesApi } from "../api/technician-rates-api";
 import type { RateGridCell, TechnicianDto } from "@shared-types/ipc";
 
-const MAX_VISIBLE_WORK_TYPES = 40;
-const LARGE_CATALOG_THRESHOLD = MAX_VISIBLE_WORK_TYPES;
+const MAX_FILTERED_COLUMNS = 40;
+/** Sub acest număr afișăm toate coloanele (ex. 42 tipuri la secretară). */
+const FULL_GRID_WORK_TYPE_LIMIT = 150;
 
 function baniToInput(bani: number): string {
   return (bani / 100).toFixed(2);
@@ -23,15 +24,6 @@ function baniToInput(bani: number): string {
 
 function cellKey(doctorId: string, workTypeId: string) {
   return `${doctorId}:${workTypeId}`;
-}
-
-function workTypeIdsFromPrices(prices: Record<string, number>): Set<string> {
-  const ids = new Set<string>();
-  for (const key of Object.keys(prices)) {
-    const workTypeId = key.split(":")[1];
-    if (workTypeId) ids.add(workTypeId);
-  }
-  return ids;
 }
 
 function useSyncedHorizontalScroll(tableWidth: number) {
@@ -135,28 +127,15 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
     if (term) {
       return workTypes
         .filter((wt) => wt.name.toLowerCase().includes(term))
-        .slice(0, MAX_VISIBLE_WORK_TYPES);
+        .slice(0, MAX_FILTERED_COLUMNS);
     }
 
-    // Catalog mic (ex. ~42 tipuri): afișează toate coloanele imediat, ca înainte.
-    if (workTypes.length <= LARGE_CATALOG_THRESHOLD) {
+    if (workTypes.length <= FULL_GRID_WORK_TYPE_LIMIT) {
       return workTypes;
     }
 
-    const pricedIds = workTypeIdsFromPrices(
-      Object.fromEntries(
-        Object.entries(cells)
-          .filter(([, value]) => value.trim())
-          .map(([key, value]) => [key, parseRonInput(value)]),
-      ),
-    );
-
-    if (pricedIds.size > 0) {
-      return workTypes.filter((wt) => pricedIds.has(wt.id)).slice(0, MAX_VISIBLE_WORK_TYPES);
-    }
-
-    return workTypes.slice(0, MAX_VISIBLE_WORK_TYPES);
-  }, [workTypes, workTypeFilter, cells]);
+    return workTypes.slice(0, MAX_FILTERED_COLUMNS);
+  }, [workTypes, workTypeFilter]);
 
   async function handleSave() {
     if (!technician) return;
@@ -195,11 +174,11 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
 
   const showWorkTypeHint =
     !loading &&
-    workTypes.length > LARGE_CATALOG_THRESHOLD &&
+    workTypes.length > FULL_GRID_WORK_TYPE_LIMIT &&
     workTypeFilter.trim().length > 0 &&
     visibleWorkTypes.length === 0;
 
-  const isLargeCatalog = workTypes.length > LARGE_CATALOG_THRESHOLD;
+  const isHugeCatalog = workTypes.length > FULL_GRID_WORK_TYPE_LIMIT;
 
   const tableRef = React.useRef<HTMLTableElement>(null);
   const [tableScrollWidth, setTableScrollWidth] = React.useState(0);
@@ -228,11 +207,11 @@ export function TechnicianRatesDialog({ technician, onOpenChange }: TechnicianRa
           <DialogTitle>Grilă tarife — {technician?.name}</DialogTitle>
           <DialogDescription>
             Preț tehnician (RON/buc) per doctor și tip lucrare — ca în Excel.
-            {isLargeCatalog && (
+            {isHugeCatalog && (
               <>
                 {" "}
                 Catalogul are {workTypes.length.toLocaleString("ro-RO")} tipuri lucrări; folosește
-                căutarea pentru coloane (max. {MAX_VISIBLE_WORK_TYPES} odată).
+                căutarea pentru coloane (max. {MAX_FILTERED_COLUMNS} odată).
               </>
             )}
           </DialogDescription>
